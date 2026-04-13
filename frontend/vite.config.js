@@ -6,10 +6,11 @@ export default defineConfig({
   preview: {
     host: true,
     port: 3000,
-    allowedHosts: ['enchanting-encouragement-production-64c7.up.railway.app'],
+    allowedHosts: 'all',
   },
   server: {
     port: 5173,
+    // Local dev only proxy - not used in production
     proxy: {
       '/api': 'http://localhost:3001',
       '/ws': { target: 'ws://localhost:3001', ws: true },
