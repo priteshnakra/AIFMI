@@ -71,7 +71,7 @@ function IntelPanel({ company, sector, prices, onClose }) {
     if (!company) return;
     setState('loading'); setBriefing(null); setError(null);
     try {
-      const res = await fetch('/api/intelligence/briefing', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL ?? 'https://aifmi-production.up.railway.app'}/api/intelligence/briefing`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company: company.name, ticker: company.ticker, hq: company.hq, spec: company.spec, sector: sector?.fullName ?? sector?.label, exchange: company.exchange }),
