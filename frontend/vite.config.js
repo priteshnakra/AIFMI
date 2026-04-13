@@ -10,10 +10,5 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // Local dev only proxy - not used in production
-    proxy: {
-      '/api': 'http://localhost:3001',
-      '/ws': { target: 'ws://localhost:3001', ws: true },
-    }
   }
 });
