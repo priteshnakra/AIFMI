@@ -251,3 +251,19 @@ server.listen(PORT, () => {
   console.log(`💰 Price mode → ${USE_REAL ? '🟢 LIVE (Polygon.io)' : '🟡 Simulated'}`);
   console.log(`📊 Tickers    → ${allPublicTickers.length} across 5 sectors\n`);
 });
+
+// Chart proxy - fetches from Yahoo Finance server-side to avoid CORS
+app.get('/api/chart/:ticker', async (req, res) => {
+  const { ticker } = req.params;
+  const { interval = '1d', range = '1mo' } = req.query;
+  try {
+    const r = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' } }
+    );
+    const data = await r.json();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});

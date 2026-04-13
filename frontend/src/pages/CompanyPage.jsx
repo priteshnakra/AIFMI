@@ -106,7 +106,7 @@ export default function CompanyPage() {
     if (!ticker) return;
     const interval = period === '1D' ? '5m' : period === '1W' ? '60m' : period === '1M' ? '1d' : '1wk';
     const range = period === '1D' ? '1d' : period === '1W' ? '5d' : period === '1M' ? '1mo' : '1y';
-    fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`)
+    fetch(`https://aifmi-production.up.railway.app/api/chart/${ticker}?interval=${interval}&range=${range}`)
       .then(r => r.json())
       .then(d => {
         const result = d?.chart?.result?.[0];
