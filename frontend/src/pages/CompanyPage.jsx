@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, ReferenceLine, Cell
-} from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 
-const API_URL = import.meta.env.VITE_API_URL ?? '';
-const FINNHUB_KEY = import.meta.env.VITE_FINNHUB_KEY ?? '';
+const API = 'https://aifmi-production.up.railway.app';
+const FINNHUB = 'https://finnhub.io/api/v1';
+const FKEY = import.meta.env.VITE_FINNHUB_KEY ?? '';
 
 const fmt = (n) => n == null ? '—' : n < 1 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
 const fmtPct = (n) => n == null ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
@@ -17,17 +15,19 @@ const fmtB = (n) => {
   if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
   return `$${n.toFixed(0)}`;
 };
-const fmtNum = (n, decimals = 2) => n == null ? '—' : n.toFixed(decimals);
+const fmtNum = (n, d = 2) => n == null ? '—' : n.toFixed(d);
+
+const SECTOR_COLORS = { gpu: '#1A6FD8', chip: '#0A5C99', asic: '#0E7A5A', npu: '#7B3FBF', network: '#C85C14' };
 
 const BROKERS = [
-  { name: 'Robinhood', color: '#00C805', url: (t) => `https://robinhood.com/stocks/${t}`, logo: '🟢' },
-  { name: 'Fidelity', color: '#1B7E3E', url: (t) => `https://digital.fidelity.com/prgw/digital/research/quote?symbol=${t}`, logo: '🔵' },
-  { name: 'Schwab', color: '#0072B5', url: (t) => `https://www.schwab.com/research/stocks/quotes/summary/${t}`, logo: '🔷' },
-  { name: 'TD Ameritrade', color: '#009B4E', url: (t) => `https://www.tdameritrade.com/home.page`, logo: '🟩' },
-  { name: 'E*TRADE', color: '#6A2C8E', url: (t) => `https://us.etrade.com/home`, logo: '🟣' },
+  { name: 'Robinhood',    url: (t) => `https://robinhood.com/stocks/${t}`,                                              emoji: '🟢' },
+  { name: 'Fidelity',     url: (t) => `https://digital.fidelity.com/prgw/digital/research/quote?symbol=${t}`,          emoji: '🔵' },
+  { name: 'Schwab',       url: (t) => `https://www.schwab.com/research/stocks/quotes/summary/${t}`,                     emoji: '🔷' },
+  { name: 'TD Ameritrade',url: () =>  `https://www.tdameritrade.com/home.page`,                                         emoji: '🟩' },
+  { name: "E*TRADE",      url: () =>  `https://us.etrade.com/home`,                                                     emoji: '🟣' },
 ];
 
-const SENTIMENT_CONFIG = {
+const SENTIMENT = {
   bullish: { color: '#0FA97A', bg: '#0FA97A18', label: '▲ BULLISH' },
   neutral: { color: '#F0A500', bg: '#F0A50018', label: '◆ NEUTRAL' },
   bearish: { color: '#DC3C3C', bg: '#DC3C3C18', label: '▼ BEARISH' },
@@ -45,7 +45,7 @@ function MetricCard({ label, value, sub, color }) {
   );
 }
 
-function SectionHeader({ title, color }) {
+function SectionTitle({ title, color }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '28px 0 16px' }}>
       <div style={{ width: 3, height: 18, background: color, borderRadius: 2 }} />
@@ -73,13 +73,8 @@ export default function CompanyPage() {
   const [briefingState, setBriefingState] = useState('idle');
   const [loading, setLoading] = useState(true);
 
-  const SECTOR_COLORS = {
-    gpu: '#1A6FD8', chip: '#0A5C99', asic: '#0E7A5A', npu: '#7B3FBF', network: '#C85C14'
-  };
-
-  // Find company in sector data
   useEffect(() => {
-    fetch(`${API_URL}/api/sectors`)
+    fetch(`${API}/api/sectors`)
       .then(r => r.json())
       .then(data => {
         for (const [sectorId, sector] of Object.entries(data)) {
@@ -96,120 +91,67 @@ export default function CompanyPage() {
       .catch(() => setLoading(false));
   }, [ticker]);
 
-  // Fetch quote from Finnhub
   useEffect(() => {
-    if (!ticker || !FINNHUB_KEY) return;
-    fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_KEY}`)
-      .then(r => r.json())
-      .then(q => { if (q?.c) setQuote(q); })
-      .catch(() => {});
+    if (!ticker || !FKEY) return;
+    fetch(`${FINNHUB}/quote?symbol=${ticker}&token=${FKEY}`).then(r => r.json()).then(q => { if (q?.c) setQuote(q); }).catch(() => {});
+    fetch(`${FINNHUB}/stock/metric?symbol=${ticker}&metric=all&token=${FKEY}`).then(r => r.json()).then(d => { if (d?.metric) setMetrics(d.metric); }).catch(() => {});
+    fetch(`${FINNHUB}/stock/recommendation?symbol=${ticker}&token=${FKEY}`).then(r => r.json()).then(d => { if (d?.length) setRecommendation(d[0]); }).catch(() => {});
+    fetch(`${FINNHUB}/stock/price-target?symbol=${ticker}&token=${FKEY}`).then(r => r.json()).then(d => { if (d?.targetMean) setPriceTarget(d); }).catch(() => {});
+    fetch(`${FINNHUB}/stock/earnings?symbol=${ticker}&token=${FKEY}`).then(r => r.json()).then(d => {
+      if (Array.isArray(d)) setEarnings(d.slice(0, 6).reverse().map(e => ({ period: e.period, actual: e.actual, estimate: e.estimate })));
+    }).catch(() => {});
   }, [ticker]);
 
-  // Fetch basic metrics from Finnhub
   useEffect(() => {
-    if (!ticker || !FINNHUB_KEY) return;
-    fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_KEY}`)
-      .then(r => r.json())
-      .then(d => { if (d?.metric) setMetrics(d.metric); })
-      .catch(() => {});
-  }, [ticker]);
-
-  // Fetch price history
-  useEffect(() => {
-    if (!ticker || !FINNHUB_KEY) return;
+    if (!ticker || !FKEY) return;
     const now = Math.floor(Date.now() / 1000);
     const ranges = { '1D': 86400, '1W': 604800, '1M': 2592000, '1Y': 31536000 };
-    const from = now - ranges[period];
     const resolutions = { '1D': '5', '1W': '60', '1M': 'D', '1Y': 'W' };
-    const res = resolutions[period];
-    fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${ticker}&resolution=${res}&from=${from}&to=${now}&token=${FINNHUB_KEY}`)
+    const from = now - ranges[period];
+    fetch(`${FINNHUB}/stock/candle?symbol=${ticker}&resolution=${resolutions[period]}&from=${from}&to=${now}&token=${FKEY}`)
       .then(r => r.json())
       .then(d => {
         if (d?.c && d.s === 'ok') {
-          const history = d.t.map((t, i) => ({
+          setPriceHistory(d.t.map((t, i) => ({
             time: new Date(t * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            price: d.c[i],
-            volume: d.v[i],
-          }));
-          setPriceHistory(history);
-        }
-      })
-      .catch(() => {});
-  }, [ticker, period]);
-
-  // Fetch earnings
-  useEffect(() => {
-    if (!ticker || !FINNHUB_KEY) return;
-    fetch(`https://finnhub.io/api/v1/stock/earnings?symbol=${ticker}&token=${FINNHUB_KEY}`)
-      .then(r => r.json())
-      .then(d => {
-        if (Array.isArray(d)) {
-          setEarnings(d.slice(0, 6).reverse().map(e => ({
-            period: e.period,
-            actual: e.actual,
-            estimate: e.estimate,
-            surprise: e.surprisePercent,
+            price: d.c[i], volume: d.v[i],
           })));
         }
-      })
-      .catch(() => {});
-  }, [ticker]);
+      }).catch(() => {});
+  }, [ticker, period]);
 
-  // Fetch analyst recommendations
-  useEffect(() => {
-    if (!ticker || !FINNHUB_KEY) return;
-    fetch(`https://finnhub.io/api/v1/stock/recommendation?symbol=${ticker}&token=${FINNHUB_KEY}`)
-      .then(r => r.json())
-      .then(d => { if (d?.length) setRecommendation(d[0]); })
-      .catch(() => {});
-
-    fetch(`https://finnhub.io/api/v1/stock/price-target?symbol=${ticker}&token=${FINNHUB_KEY}`)
-      .then(r => r.json())
-      .then(d => { if (d?.targetMean) setPriceTarget(d); })
-      .catch(() => {});
-  }, [ticker]);
-
-  // Fetch AI briefing
   const fetchBriefing = useCallback(async () => {
     if (!company) return;
     setBriefingState('loading');
     try {
-      const res = await fetch(`${API_URL}/api/intelligence/briefing`, {
+      const res = await fetch(`${API}/api/intelligence/briefing`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          company: company.name, ticker: company.ticker,
-          hq: company.hq, spec: company.spec,
-          sector: company.sectorFullName, exchange: company.exchange,
-        }),
+        body: JSON.stringify({ company: company.name, ticker: company.ticker, hq: company.hq, spec: company.spec, sector: company.sectorFullName, exchange: company.exchange }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setBriefing(data.briefing);
       setBriefingState('done');
-    } catch (e) { setBriefingState('error'); }
+    } catch { setBriefingState('error'); }
   }, [company]);
 
   useEffect(() => { if (company) fetchBriefing(); }, [company]);
 
   const isUp = (quote?.dp ?? 0) >= 0;
-  const sentCfg = SENTIMENT_CONFIG[briefing?.sentiment] ?? SENTIMENT_CONFIG.neutral;
-
-  // Analyst consensus bar
-  const totalRecs = recommendation
-    ? (recommendation.strongBuy + recommendation.buy + recommendation.hold + recommendation.sell + recommendation.strongSell)
-    : 0;
+  const sentCfg = SENTIMENT[briefing?.sentiment] ?? SENTIMENT.neutral;
+  const totalRecs = recommendation ? (recommendation.strongBuy + recommendation.buy + recommendation.hold + recommendation.sell + recommendation.strongSell) : 0;
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#050508', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ fontFamily: 'Space Mono, monospace', color: '#444', fontSize: 14 }}>Loading...</div>
+      <div style={{ fontFamily: 'Space Mono, monospace', color: '#444' }}>Loading...</div>
     </div>
   );
 
   if (!company) return (
     <div style={{ minHeight: '100vh', background: '#050508', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
       <div style={{ fontFamily: 'Syne, sans-serif', color: '#fff', fontSize: 24 }}>Company not found</div>
-      <button onClick={() => navigate('/')} style={{ background: '#1A6FD8', border: 'none', color: '#fff', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontFamily: 'Space Mono, monospace' }}>← Back to Dashboard</button>
+      <button onClick={() => navigate('/')} style={{ background: '#1A6FD8', border: 'none', color: '#fff', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontFamily: 'Space Mono, monospace' }}>← Back</button>
     </div>
   );
 
@@ -222,18 +164,14 @@ export default function CompanyPage() {
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes shimmer { 0%{transform:translateX(-200%)} 100%{transform:translateX(300%)} }
         ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-track{background:#050508} ::-webkit-scrollbar-thumb{background:#1a1a2e;border-radius:3px}
-        .period-btn { background: none; border: 1px solid #1a1a2e; color: #555; font-family: 'Space Mono', monospace; font-size: 10px; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
-        .period-btn:hover { border-color: #333; color: #aaa; }
-        .period-btn.active { background: ${sectorColor}22; border-color: ${sectorColor}; color: ${sectorColor}; }
-        .broker-btn { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 8px; border: 1px solid #1a1a2e; background: #0a0a12; cursor: pointer; transition: all 0.2s; text-decoration: none; }
-        .broker-btn:hover { border-color: #333; background: #0f0f1a; transform: translateY(-1px); }
+        .pbtn { background:none; border:1px solid #1a1a2e; color:#555; fontFamily:'Space Mono',monospace; fontSize:10px; padding:4px 10px; borderRadius:4px; cursor:pointer; transition:all 0.15s; }
+        .pbtn:hover { border-color:#333; color:#aaa; }
+        .pbtn.active { background:${sectorColor}22; border-color:${sectorColor}; color:${sectorColor}; }
       `}</style>
 
       {/* Header */}
       <header style={{ borderBottom: '1px solid #0f0f1a', padding: '14px 32px', background: '#070710', position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', gap: 16 }}>
-        <button onClick={() => navigate('/')} style={{ background: 'none', border: '1px solid #1a1a2e', color: '#555', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontFamily: 'Space Mono, monospace', fontSize: 11 }}>
-          ← Dashboard
-        </button>
+        <button onClick={() => navigate('/')} style={{ background: 'none', border: '1px solid #1a1a2e', color: '#555', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontFamily: 'Space Mono, monospace', fontSize: 11 }}>← Dashboard</button>
         <div style={{ height: 20, width: 1, background: '#1a1a2e' }} />
         <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: sectorColor, background: `${sectorColor}18`, padding: '3px 10px', borderRadius: 4 }}>{sectorLabel}</span>
         <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16, color: '#fff' }}>{company.name}</span>
@@ -244,10 +182,10 @@ export default function CompanyPage() {
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px', animation: 'fadeIn 0.3s ease' }}>
 
-        {/* Hero — price + key stats */}
+        {/* Hero */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 8 }}>
           <div style={{ background: '#08080f', borderRadius: 12, border: `1px solid ${sectorColor}33`, padding: '24px 28px' }}>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 32, color: '#fff', marginBottom: 4 }}>{company.name}</div>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 28, color: '#fff', marginBottom: 4 }}>{company.name}</div>
             <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#555', marginBottom: 20 }}>{company.spec} · {company.hq}</div>
             {quote ? (
               <>
@@ -256,24 +194,24 @@ export default function CompanyPage() {
                   {isUp ? '+' : ''}{fmt(quote.d)} ({fmtPct(quote.dp)}) today
                 </div>
                 <div style={{ display: 'flex', gap: 20, marginTop: 16 }}>
-                  <div><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#444', marginBottom: 4 }}>HIGH</div><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#aaa' }}>{fmt(quote.h)}</div></div>
-                  <div><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#444', marginBottom: 4 }}>LOW</div><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#aaa' }}>{fmt(quote.l)}</div></div>
-                  <div><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#444', marginBottom: 4 }}>OPEN</div><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#aaa' }}>{fmt(quote.o)}</div></div>
-                  <div><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#444', marginBottom: 4 }}>PREV CLOSE</div><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#aaa' }}>{fmt(quote.pc)}</div></div>
+                  {[['HIGH', fmt(quote.h)], ['LOW', fmt(quote.l)], ['OPEN', fmt(quote.o)], ['PREV CLOSE', fmt(quote.pc)]].map(([l, v]) => (
+                    <div key={l}><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#444', marginBottom: 4 }}>{l}</div><div style={{ fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#aaa' }}>{v}</div></div>
+                  ))}
                 </div>
               </>
             ) : (
-              <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 13, color: '#333', fontStyle: 'italic' }}>Price data loading...</div>
+              <div style={{ fontFamily: 'Space Mono, monospace', color: '#333', fontStyle: 'italic' }}>
+                {FKEY ? 'Loading price data...' : 'Add VITE_FINNHUB_KEY to Railway to enable live data'}
+              </div>
             )}
           </div>
 
-          {/* Key metrics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <MetricCard label="Market Cap" value={fmtB(metrics?.marketCapitalization * 1e6)} />
+            <MetricCard label="Market Cap" value={fmtB((metrics?.marketCapitalization ?? 0) * 1e6)} />
             <MetricCard label="P/E Ratio" value={fmtNum(metrics?.peBasicExclExtraTTM)} sub="Trailing 12M" />
             <MetricCard label="EPS (TTM)" value={metrics?.epsBasicExclExtraAnnual ? `$${fmtNum(metrics.epsBasicExclExtraAnnual)}` : '—'} />
             <MetricCard label="ROE" value={metrics?.roeTTM ? `${fmtNum(metrics.roeTTM)}%` : '—'} color={metrics?.roeTTM > 15 ? '#0FA97A' : undefined} />
-            <MetricCard label="Debt / Equity" value={fmtNum(metrics?.totalDebt_totalEquityAnnual)} color={metrics?.totalDebt_totalEquityAnnual > 2 ? '#DC3C3C' : '#0FA97A'} />
+            <MetricCard label="Debt / Equity" value={fmtNum(metrics?.totalDebt_totalEquityAnnual)} color={(metrics?.totalDebt_totalEquityAnnual ?? 0) > 2 ? '#DC3C3C' : '#0FA97A'} />
             <MetricCard label="Dividend Yield" value={metrics?.dividendYieldIndicatedAnnual ? `${fmtNum(metrics.dividendYieldIndicatedAnnual)}%` : 'N/A'} />
             <MetricCard label="52W High" value={fmt(metrics?.['52WeekHigh'])} />
             <MetricCard label="52W Low" value={fmt(metrics?.['52WeekLow'])} />
@@ -281,11 +219,13 @@ export default function CompanyPage() {
         </div>
 
         {/* Price Chart */}
-        <SectionHeader title="Price History" color={sectorColor} />
+        <SectionTitle title="Price History" color={sectorColor} />
         <div style={{ background: '#08080f', borderRadius: 12, border: '1px solid #0f0f1a', padding: '20px 24px' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             {PERIODS.map(p => (
-              <button key={p} className={`period-btn ${period === p ? 'active' : ''}`} onClick={() => setPeriod(p)}>{p}</button>
+              <button key={p} className={`pbtn ${period === p ? 'active' : ''}`} onClick={() => setPeriod(p)}
+                style={{ background: period === p ? `${sectorColor}22` : 'none', border: `1px solid ${period === p ? sectorColor : '#1a1a2e'}`, color: period === p ? sectorColor : '#555', fontFamily: 'Space Mono, monospace', fontSize: 10, padding: '4px 10px', borderRadius: 4, cursor: 'pointer' }}
+              >{p}</button>
             ))}
           </div>
           {priceHistory.length > 0 ? (
@@ -294,33 +234,30 @@ export default function CompanyPage() {
                 <LineChart data={priceHistory}>
                   <XAxis dataKey="time" tick={{ fill: '#444', fontSize: 10, fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                   <YAxis domain={['auto', 'auto']} tick={{ fill: '#444', fontSize: 10, fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v.toFixed(0)}`} width={60} />
-                  <Tooltip contentStyle={{ background: '#0a0a12', border: `1px solid ${sectorColor}44`, borderRadius: 6, fontFamily: 'Space Mono', fontSize: 11 }} labelStyle={{ color: '#888' }} formatter={(v) => [`$${v.toFixed(2)}`, 'Price']} />
+                  <Tooltip contentStyle={{ background: '#0a0a12', border: `1px solid ${sectorColor}44`, borderRadius: 6, fontFamily: 'Space Mono', fontSize: 11 }} formatter={(v) => [`$${v.toFixed(2)}`, 'Price']} />
                   <Line type="monotone" dataKey="price" dot={false} strokeWidth={2} stroke={isUp ? '#0FA97A' : '#DC3C3C'} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
-
-              {/* Volume */}
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#333', letterSpacing: 1, marginBottom: 6 }}>VOLUME</div>
                 <ResponsiveContainer width="100%" height={60}>
                   <BarChart data={priceHistory}>
                     <Bar dataKey="volume" fill={`${sectorColor}44`} radius={[2, 2, 0, 0]} isAnimationActive={false} />
-                    <XAxis hide /> <YAxis hide />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </>
           ) : (
             <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#333' }}>
-              {FINNHUB_KEY ? 'Loading chart data...' : 'Add VITE_FINNHUB_KEY to enable charts'}
+              {FKEY ? 'Loading chart...' : 'Add VITE_FINNHUB_KEY to Railway variables to enable charts'}
             </div>
           )}
         </div>
 
-        {/* Earnings Chart */}
+        {/* Earnings */}
         {earnings.length > 0 && (
           <>
-            <SectionHeader title="Earnings per Share — Last 6 Quarters" color={sectorColor} />
+            <SectionTitle title="Earnings per Share — Last 6 Quarters" color={sectorColor} />
             <div style={{ background: '#08080f', borderRadius: 12, border: '1px solid #0f0f1a', padding: '20px 24px' }}>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={earnings} barGap={4}>
@@ -330,25 +267,26 @@ export default function CompanyPage() {
                   <ReferenceLine y={0} stroke="#1a1a2e" />
                   <Bar dataKey="estimate" fill="#1a1a2e" name="Estimate" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="actual" name="Actual" radius={[3, 3, 0, 0]} isAnimationActive={false}>
-                    {earnings.map((e, i) => (
-                      <Cell key={i} fill={(e.actual ?? 0) >= (e.estimate ?? 0) ? '#0FA97A' : '#DC3C3C'} />
-                    ))}
+                    {earnings.map((e, i) => <Cell key={i} fill={(e.actual ?? 0) >= (e.estimate ?? 0) ? '#0FA97A' : '#DC3C3C'} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
               <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#1a1a2e' }} /><span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#555' }}>Estimate</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#0FA97A' }} /><span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#555' }}>Beat</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#DC3C3C' }} /><span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#555' }}>Miss</span></div>
+                {[['#1a1a2e', 'Estimate'], ['#0FA97A', 'Beat'], ['#DC3C3C', 'Miss']].map(([c, l]) => (
+                  <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
+                    <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#555' }}>{l}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </>
         )}
 
-        {/* Analyst Recommendations */}
+        {/* Analyst Consensus */}
         {(recommendation || priceTarget) && (
           <>
-            <SectionHeader title="Analyst Consensus" color={sectorColor} />
+            <SectionTitle title="Analyst Consensus" color={sectorColor} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
               {recommendation && totalRecs > 0 && (
                 <div style={{ background: '#08080f', borderRadius: 12, border: '1px solid #0f0f1a', padding: '20px 24px' }}>
@@ -366,31 +304,25 @@ export default function CompanyPage() {
                         <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color }}>{count}</span>
                       </div>
                       <div style={{ height: 6, background: '#0f0f1a', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${(count / totalRecs) * 100}%`, background: color, borderRadius: 3, transition: 'width 0.5s ease' }} />
+                        <div style={{ height: '100%', width: `${(count / totalRecs) * 100}%`, background: color, borderRadius: 3 }} />
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-
               {priceTarget && (
                 <div style={{ background: '#08080f', borderRadius: 12, border: '1px solid #0f0f1a', padding: '20px 24px' }}>
                   <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#444', letterSpacing: 1, marginBottom: 16 }}>PRICE TARGETS</div>
-                  {[
-                    { label: 'High Target', value: fmt(priceTarget.targetHigh), color: '#0FA97A' },
-                    { label: 'Mean Target', value: fmt(priceTarget.targetMean), color: '#F0A500' },
-                    { label: 'Low Target', value: fmt(priceTarget.targetLow), color: '#DC3C3C' },
-                    { label: 'Current Price', value: fmt(quote?.c), color: '#888' },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #0f0f1a' }}>
-                      <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#555' }}>{label}</span>
-                      <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 14, fontWeight: 700, color }}>{value}</span>
+                  {[['High Target', fmt(priceTarget.targetHigh), '#0FA97A'], ['Mean Target', fmt(priceTarget.targetMean), '#F0A500'], ['Low Target', fmt(priceTarget.targetLow), '#DC3C3C'], ['Current Price', fmt(quote?.c), '#888']].map(([l, v, c]) => (
+                    <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #0f0f1a' }}>
+                      <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#555' }}>{l}</span>
+                      <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 14, fontWeight: 700, color: c }}>{v}</span>
                     </div>
                   ))}
                   {quote?.c && priceTarget?.targetMean && (
-                    <div style={{ marginTop: 14, padding: '10px 14px', background: (priceTarget.targetMean > quote.c) ? '#0FA97A18' : '#DC3C3C18', borderRadius: 6 }}>
-                      <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: (priceTarget.targetMean > quote.c) ? '#0FA97A' : '#DC3C3C' }}>
-                        Analyst consensus: {priceTarget.targetMean > quote.c ? '▲' : '▼'} {Math.abs(((priceTarget.targetMean - quote.c) / quote.c) * 100).toFixed(1)}% {priceTarget.targetMean > quote.c ? 'upside' : 'downside'} to mean target
+                    <div style={{ marginTop: 14, padding: '10px 14px', background: priceTarget.targetMean > quote.c ? '#0FA97A18' : '#DC3C3C18', borderRadius: 6 }}>
+                      <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: priceTarget.targetMean > quote.c ? '#0FA97A' : '#DC3C3C' }}>
+                        {priceTarget.targetMean > quote.c ? '▲' : '▼'} {Math.abs(((priceTarget.targetMean - quote.c) / quote.c) * 100).toFixed(1)}% to mean target
                       </span>
                     </div>
                   )}
@@ -400,24 +332,26 @@ export default function CompanyPage() {
           </>
         )}
 
-        {/* Buy / Sell via Brokers */}
-        <SectionHeader title="Trade This Stock" color={sectorColor} />
+        {/* Trade via Brokers */}
+        <SectionTitle title="Trade This Stock" color={sectorColor} />
         <div style={{ background: '#08080f', borderRadius: 12, border: '1px solid #0f0f1a', padding: '20px 24px' }}>
-          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#333', marginBottom: 16 }}>
-            Opens your broker's page for {company.ticker} — you'll need to log in to trade
-          </div>
+          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#333', marginBottom: 16 }}>Opens your broker's page for {company.ticker} — log in to trade</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
             {BROKERS.map(broker => (
-              <a key={broker.name} href={broker.url(company.ticker)} target="_blank" rel="noopener noreferrer" className="broker-btn">
-                <span style={{ fontSize: 18 }}>{broker.logo}</span>
+              <a key={broker.name} href={broker.url(company.ticker)} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 8, border: '1px solid #1a1a2e', background: '#0a0a12', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.background = '#0f0f1a'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a1a2e'; e.currentTarget.style.background = '#0a0a12'; }}
+              >
+                <span style={{ fontSize: 18 }}>{broker.emoji}</span>
                 <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 600, fontSize: 12, color: '#ccc' }}>{broker.name}</span>
               </a>
             ))}
           </div>
         </div>
 
-        {/* AI Intelligence Briefing */}
-        <SectionHeader title="AI Intelligence Briefing" color={sectorColor} />
+        {/* AI Briefing */}
+        <SectionTitle title="AI Intelligence Briefing" color={sectorColor} />
         <div style={{ background: '#08080f', borderRadius: 12, border: '1px solid #0f0f1a', padding: '24px' }}>
           {briefingState === 'loading' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -431,14 +365,12 @@ export default function CompanyPage() {
               ))}
             </div>
           )}
-
           {briefingState === 'error' && (
             <div style={{ padding: 20, background: '#1a0808', border: '1px solid #DC3C3C33', borderRadius: 8 }}>
               <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#DC3C3C', marginBottom: 12 }}>⚠ Failed to load briefing</div>
               <button onClick={fetchBriefing} style={{ background: '#DC3C3C18', border: '1px solid #DC3C3C44', color: '#DC3C3C', fontFamily: 'Space Mono, monospace', fontSize: 10, padding: '6px 14px', borderRadius: 4, cursor: 'pointer' }}>Try again</button>
             </div>
           )}
-
           {briefingState === 'done' && briefing && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, animation: 'fadeIn 0.4s ease' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

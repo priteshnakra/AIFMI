@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL ?? '';
-const WS_URL = API_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+const WS_URL = 'wss://aifmi-production.up.railway.app';
 
 export function useLivePrices() {
   const [prices, setPrices] = useState({});
@@ -10,8 +9,7 @@ export function useLivePrices() {
   const wsRef = useRef(null);
 
   const connect = useCallback(() => {
-    const wsTarget = WS_URL || `ws://localhost:3001`;
-    const ws = new WebSocket(wsTarget);
+    const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
     ws.onopen = () => setConnected(true);
