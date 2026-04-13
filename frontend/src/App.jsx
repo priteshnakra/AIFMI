@@ -450,7 +450,7 @@ export default function App() {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    fetch('/api/sectors').then(r => r.json()).then(setSectorData).catch(console.error);
+    fetch(API+'/api/sectors').then(r => r.json()).then(setSectorData).catch(console.error);
   }, []);
 
   useEffect(() => {
