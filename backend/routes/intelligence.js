@@ -2,6 +2,16 @@ import express from 'express';
 
 const router = express.Router();
 
+// Allow cross-origin requests from the frontend
+router.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
+// Cache briefings for 10 minutes to avoid hammering the API
 const cache = new Map();
 const CACHE_TTL = 10 * 60 * 1000;
 
@@ -16,6 +26,7 @@ router.post('/briefing', async (req, res) => {
     return res.json(cached.data);
   }
 
+  const isPrivate = exchange === 'Private';
   const tickerStr = ticker ? `(${ticker} on ${exchange})` : '(privately held)';
 
   const prompt = `You are a senior financial analyst specializing in AI and semiconductor companies. 
@@ -43,11 +54,11 @@ Return ONLY a valid JSON object with exactly this structure:
     "detail": "2-3 sentences on new product launches, patent activity, R&D breakthroughs, or roadmap announcements relevant to AI"
   },
   "outlook": "1-2 sentence forward-looking analyst sentiment and key risks or catalysts to watch",
-  "sentiment": "bullish",
+  "sentiment": "bullish" | "neutral" | "bearish",
   "lastUpdated": "${new Date().toISOString()}"
 }
 
-Base this on your training knowledge. Be specific and factual. Do not include any text outside the JSON object.`;
+Base this on your training knowledge up to your cutoff. Be specific and factual. Do not include any text outside the JSON object.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
