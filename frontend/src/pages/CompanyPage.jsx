@@ -104,18 +104,23 @@ export default function CompanyPage() {
 
   useEffect(() => {
     if (!ticker) return;
-    const now = Math.floor(Date.now() / 1000);
-    const ranges = { '1D': 86400, '1W': 604800, '1M': 2592000, '1Y': 31536000 };
-    const resolutions = { '1D': '5', '1W': '60', '1M': 'D', '1Y': 'W' };
-    const from = now - ranges[period];
-    fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${period==="1D"?"5m":period==="1W"?"60m":period==="1M"?"1d":"1wk"}&range=${period==="1D"?"1d":period==="1W"?"5d":period==="1M"?"1mo":"1y"}`, {headers:{"User-Agent":"Mozilla/5.0"}}).then(r=>r.json()).then(d=>{const q=d?.chart?.result?.[0];if(q){const ts=q.timestamps??q.timestamp;const closes=q.indicators?.quote?.[0]?.close;if(ts&&closes){setPriceHistory(ts.map((t,i)=>({time:new Date(t*1000).toLocaleDateString("en-US",{month:"short",day:"numeric"}),price:closes[i]??0,volume:q.indicators?.quote?.[0]?.volume?.[i]??0})).filter(p=>p.price>0));}}}).catch(()=>{});
+    const interval = period === '1D' ? '5m' : period === '1W' ? '60m' : period === '1M' ? '1d' : '1wk';
+    const range = period === '1D' ? '1d' : period === '1W' ? '5d' : period === '1M' ? '1mo' : '1y';
+    fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`)
       .then(r => r.json())
       .then(d => {
-        if (d?.c && d.s === 'ok') {
-          setPriceHistory(d.t.map((t, i) => ({
-            time: new Date(t * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            price: d.c[i], volume: d.v[i],
-          })));
+        const result = d?.chart?.result?.[0];
+        if (result) {
+          const ts = result.timestamp;
+          const closes = result.indicators?.quote?.[0]?.close;
+          const volumes = result.indicators?.quote?.[0]?.volume;
+          if (ts && closes) {
+            setPriceHistory(ts.map((t, i) => ({
+              time: new Date(t * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              price: closes[i] ?? 0,
+              volume: volumes?.[i] ?? 0,
+            })).filter(p => p.price > 0));
+          }
         }
       }).catch(() => {});
   }, [ticker, period]);
