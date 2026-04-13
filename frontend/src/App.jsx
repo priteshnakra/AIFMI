@@ -1,3 +1,4 @@
+const API = 'https://aifmi-production.up.railway.app';
 import { useState, useEffect, useCallback } from 'react';
 import { useLivePrices } from './hooks/useLivePrices';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
