@@ -1,4 +1,3 @@
-const API = 'https://aifmi-production.up.railway.app';
 import { useState, useEffect, useCallback } from 'react';
 import { useLivePrices } from './hooks/useLivePrices';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
@@ -450,7 +449,7 @@ export default function App() {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    fetch(API+'/api/sectors').then(r => r.json()).then(setSectorData).catch(console.error);
+    fetch('/api/sectors').then(r => r.json()).then(setSectorData).catch(console.error);
   }, []);
 
   useEffect(() => {
