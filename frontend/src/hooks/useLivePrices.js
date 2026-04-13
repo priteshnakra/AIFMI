@@ -1,20 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL ?? '';
+const WS_URL = API_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+
 export function useLivePrices() {
   const [prices, setPrices] = useState({});
   const [connected, setConnected] = useState(false);
   const [flashMap, setFlashMap] = useState({});
   const wsRef = useRef(null);
-  const prevRef = useRef({});
 
   const connect = useCallback(() => {
-    const ws = new WebSocket(`ws://localhost:3001`);
+    const wsTarget = WS_URL || `ws://localhost:3001`;
+    const ws = new WebSocket(wsTarget);
     wsRef.current = ws;
 
     ws.onopen = () => setConnected(true);
     ws.onclose = () => {
       setConnected(false);
-      setTimeout(connect, 2000); // auto-reconnect
+      setTimeout(connect, 2000);
     };
     ws.onerror = () => ws.close();
 
@@ -23,7 +26,6 @@ export function useLivePrices() {
       if (msg.type === 'SNAPSHOT' || msg.type === 'PRICE_UPDATE') {
         const incoming = msg.data;
         const newFlash = {};
-
         setPrices(prev => {
           const next = { ...prev };
           for (const [ticker, data] of Object.entries(incoming)) {
@@ -35,7 +37,6 @@ export function useLivePrices() {
           }
           return next;
         });
-
         if (Object.keys(newFlash).length > 0) {
           setFlashMap(f => ({ ...f, ...newFlash }));
           setTimeout(() => {
