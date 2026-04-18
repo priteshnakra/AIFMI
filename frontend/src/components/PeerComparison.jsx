@@ -65,20 +65,22 @@ async function fetchMetrics(ticker, finnhubKey) {
   } catch { return {}; }
 }
 
-async function getAIVerdict(currentTicker, currentName, stockPct, finxPct, arkfPct, peers) {
+async function getAIVerdict(currentTicker, currentName, stockPct, finxPct, arkfPct, diaPct, peers) {
   const beating = stockPct > finxPct;
   const margin = Math.abs(stockPct - finxPct).toFixed(1);
+  const vsDow = stockPct != null && diaPct != null ? (stockPct - diaPct).toFixed(1) : null;
   const peerNames = peers.join(', ');
-  const prompt = `You are a concise financial analyst. In 2-3 sentences max, give a punchy verdict on ${currentName} (${currentTicker})'s 1-month performance vs the fintech sector.
+  const prompt = `You are a concise financial analyst. In 2-3 sentences max, give a punchy verdict on ${currentName} (${currentTicker})'s 1-month performance vs the fintech sector and broader market.
 
 Data:
 - ${currentTicker} 1M return: ${stockPct?.toFixed(1)}%
-- FINX (FinTech Index) 1M return: ${finxPct?.toFixed(1)}%
+- FINX (FinTech ETF) 1M return: ${finxPct?.toFixed(1)}%
 - ARKF (ARK FinTech) 1M return: ${arkfPct?.toFixed(1)}%
+- DIA (Dow Jones) 1M return: ${diaPct?.toFixed(1)}%
+- ${currentTicker} is ${beating ? 'BEATING' : 'LAGGING'} FINX by ${margin}% and ${vsDow >= 0 ? 'BEATING' : 'LAGGING'} the Dow Jones by ${Math.abs(vsDow)}%
 - Peers selected: ${peerNames || 'none'}
-- ${currentTicker} is ${beating ? 'BEATING' : 'LAGGING'} FINX by ${margin}%
 
-Be direct, specific, and use the actual numbers. End with one forward-looking sentence. Do not use disclaimers or "not financial advice".`;
+Be direct, use the actual numbers for all three benchmarks. End with one forward-looking sentence. No disclaimers.`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -170,7 +172,8 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
     const stockPct = finalPcts[currentTicker];
     const finxPct = finalPcts['FINX'];
     const arkfPct = finalPcts['ARKF'];
-    const text = await getAIVerdict(currentTicker, currentName, stockPct, finxPct, arkfPct, selected);
+    const diaPct = finalPcts['DIA'];
+    const text = await getAIVerdict(currentTicker, currentName, stockPct, finxPct, arkfPct, diaPct, selected);
     setVerdict(text);
     setVerdictLoading(false);
   };
