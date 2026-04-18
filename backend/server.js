@@ -267,3 +267,24 @@ app.get('/api/chart/:ticker', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// EPS + key stats from Yahoo Finance
+app.get('/api/stats/:ticker', async (req, res) => {
+  const { ticker } = req.params;
+  try {
+    const r = await fetch(
+      `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=defaultKeyStatistics,financialData`,
+      { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' } }
+    );
+    const data = await r.json();
+    const ks = data?.quoteSummary?.result?.[0]?.defaultKeyStatistics;
+    const fd = data?.quoteSummary?.result?.[0]?.financialData;
+    res.json({
+      eps: ks?.trailingEps?.raw ?? null,
+      debtToEquity: fd?.debtToEquity?.raw ?? null,
+      returnOnEquity: fd?.returnOnEquity?.raw ?? null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});

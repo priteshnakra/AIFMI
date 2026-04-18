@@ -41,13 +41,26 @@ async function fetchHistory(ticker) {
 }
 
 async function fetchMetrics(ticker, finnhubKey) {
-  if (!finnhubKey) return {};
   try {
-    const [qRes, mRes] = await Promise.all([
-      fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`).then(r => r.json()),
-      fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${finnhubKey}`).then(r => r.json()),
-    ]);
-    return { price: qRes?.c, changePct: qRes?.dp, marketCap: mRes?.metric?.marketCapitalization, pe: mRes?.metric?.peBasicExclExtraTTM, roe: mRes?.metric?.roeTTM, eps: mRes?.metric?.epsBasicExclExtraAnnual };
+    const requests = [
+      fetch(`${API}/api/stats/${ticker}`).then(r => r.json()).catch(() => ({})),
+    ];
+    if (finnhubKey) {
+      requests.push(
+        fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`).then(r => r.json()).catch(() => ({})),
+        fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${finnhubKey}`).then(r => r.json()).catch(() => ({}))
+      );
+    }
+    const [yahoo, qRes, mRes] = await Promise.all(requests);
+    return {
+      price: qRes?.c,
+      changePct: qRes?.dp,
+      marketCap: mRes?.metric?.marketCapitalization,
+      pe: mRes?.metric?.peBasicExclExtraTTM,
+      roe: yahoo?.returnOnEquity ? yahoo.returnOnEquity * 100 : mRes?.metric?.roeTTM,
+      eps: yahoo?.eps ?? mRes?.metric?.epsBasicExclExtraAnnual,
+      debtToEquity: yahoo?.debtToEquity,
+    };
   } catch { return {}; }
 }
 
