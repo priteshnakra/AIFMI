@@ -340,7 +340,7 @@ export default function CompanyPage() {
 
         {/* Peer Comparison */}
         <SectionTitle title="Peer Comparison" color={sectorColor} />
-        <PeerComparison currentTicker={ticker} currentName={company?.name} sectorColor={sectorColor} finnhubKey={FKEY} />
+        <PeerComparison currentTicker={ticker} currentName={company?.name} sectorColor={sectorColor} finnhubKey={FKEY} sectorId={company?.sectorId} />
 
         {/* Trade via Brokers */}
         <SectionTitle title="Trade This Stock" color={sectorColor} />

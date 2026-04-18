@@ -93,7 +93,7 @@ Be direct, use the actual numbers for all three benchmarks. End with one forward
   } catch { return null; }
 }
 
-export default function PeerComparison({ currentTicker, currentName, sectorColor, finnhubKey }) {
+export default function PeerComparison({ currentTicker, currentName, sectorColor, finnhubKey, sectorId }) {
   const [sectorPeers, setSectorPeers] = useState([]);
   const [selected, setSelected] = useState([]);
   const [chartData, setChartData] = useState([]);
@@ -108,13 +108,10 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
 
   useEffect(() => {
     fetch(`${API}/api/sectors`).then(r => r.json()).then(data => {
-      for (const sector of Object.values(data)) {
-        const found = sector.companies.find(c => c.ticker === currentTicker);
-        if (found) {
-          const peers = sector.companies.filter(c => c.ticker && c.ticker !== currentTicker && ['NASDAQ', 'NYSE'].includes(c.exchange));
-          setSectorPeers(peers);
-          break;
-        }
+      const sector = sectorId ? data[sectorId] : Object.values(data).find(s => s.companies.find(c => c.ticker === currentTicker));
+      if (sector) {
+        const peers = sector.companies.filter(c => c.ticker && c.ticker !== currentTicker && ['NASDAQ', 'NYSE'].includes(c.exchange));
+        setSectorPeers(peers);
       }
     }).catch(() => {});
   }, [currentTicker]);
