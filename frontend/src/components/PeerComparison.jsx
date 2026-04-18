@@ -275,7 +275,7 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
               {beating ? '▲ BEATING' : '▼ LAGGING'} FINX by {Math.abs(stockPct - finxPct).toFixed(1)}%
             </span>
             <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#555' }}>
-              {currentTicker}: {stockPct >= 0 ? '+' : ''}{stockPct?.toFixed(1)}% · FINX: {finxPct >= 0 ? '+' : ''}{finxPct?.toFixed(1)}% · ARKF: {finalPcts['ARKF'] >= 0 ? '+' : ''}{finalPcts['ARKF']?.toFixed(1)}%
+              {currentTicker}: {stockPct >= 0 ? '+' : ''}{stockPct?.toFixed(1)}% · FINX: {finxPct >= 0 ? '+' : ''}{finxPct?.toFixed(1)}% · ARKF: {finalPcts['ARKF'] >= 0 ? '+' : ''}{finalPcts['ARKF']?.toFixed(1)}% · DIA: {finalPcts['DIA'] >= 0 ? '+' : ''}{finalPcts['DIA']?.toFixed(1)}%
             </span>
           </div>
           <button onClick={generateVerdict} style={{ background: 'none', border: `1px solid ${beating ? '#0FA97A44' : '#DC3C3C44'}`, color: beating ? '#0FA97A' : '#DC3C3C', fontFamily: 'Space Mono, monospace', fontSize: 9, padding: '5px 12px', borderRadius: 4, cursor: 'pointer', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
