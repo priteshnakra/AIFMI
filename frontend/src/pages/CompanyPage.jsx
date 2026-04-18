@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import PeerComparison from '../components/PeerComparison.jsx';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 
@@ -336,6 +337,10 @@ export default function CompanyPage() {
             </div>
           </>
         )}
+
+        {/* Peer Comparison */}
+        <SectionTitle title="Peer Comparison" color={sectorColor} />
+        <PeerComparison currentTicker={ticker} currentName={company?.name} sectorColor={sectorColor} finnhubKey={FKEY} />
 
         {/* Trade via Brokers */}
         <SectionTitle title="Trade This Stock" color={sectorColor} />
