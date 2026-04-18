@@ -98,6 +98,12 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
   }, [selected, currentTicker]);
 
   useEffect(() => {
+    if (!metricsMap[currentTicker]) {
+      fetchMetrics(currentTicker, finnhubKey).then(m => setMetricsMap(prev => ({ ...prev, [currentTicker]: m })));
+    }
+  }, [currentTicker, finnhubKey]);
+
+  useEffect(() => {
     if (selected.length === 0) return;
     const missing = selected.filter(t => !metricsMap[t]);
     if (missing.length === 0) return;
