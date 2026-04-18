@@ -18,6 +18,7 @@ const fmtPct = (n) => n == null ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`
 const BENCHMARKS = [
   { ticker: 'FINX', label: 'FinTech Index (FINX)', color: '#3a3a5a', dash: '6 3' },
   { ticker: 'ARKF', label: 'ARK FinTech (ARKF)', color: '#2a4a3a', dash: '3 3' },
+  { ticker: 'DIA', label: 'Dow Jones (DIA)', color: '#4a3a2a', dash: '4 2' },
 ];
 
 function normalise(history) {
