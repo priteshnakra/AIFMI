@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 export default function Disclaimer({ onAccept }) {
   const [checked, setChecked] = useState(false);
+  const handleAccept = () => { if (checked) { localStorage.setItem('aifmi_disclaimer', 'true'); onAccept(); } };
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
       <div style={{ background: '#07070f', border: '1px solid #1a1a2e', borderRadius: 12, maxWidth: 560, width: '100%', padding: '32px' }}>
@@ -22,7 +23,7 @@ export default function Disclaimer({ onAccept }) {
           <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, accentColor: '#1A6FD8', cursor: 'pointer', flexShrink: 0 }} />
           <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#888', lineHeight: 1.7 }}>I have read and understood the disclaimer. I agree that AIFMI does not provide financial advice and I will not make investment decisions based solely on this platform.</span>
         </label>
-        <button onClick={() => checked && onAccept()} style={{ width: '100%', padding: '12px', borderRadius: 8, background: checked ? '#1A6FD8' : '#0f0f1a', border: `1px solid ${checked ? '#1A6FD8' : '#1a1a2e'}`, color: checked ? '#fff' : '#333', fontFamily: 'Space Mono, monospace', fontSize: 11, letterSpacing: 1, cursor: checked ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}>
+        <button onClick={handleAccept} style={{ width: '100%', padding: '12px', borderRadius: 8, background: checked ? '#1A6FD8' : '#0f0f1a', border: `1px solid ${checked ? '#1A6FD8' : '#1a1a2e'}`, color: checked ? '#fff' : '#333', fontFamily: 'Space Mono, monospace', fontSize: 11, letterSpacing: 1, cursor: checked ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}>
           {checked ? 'ENTER AIFMI →' : 'PLEASE CHECK THE BOX TO CONTINUE'}
         </button>
       </div>
