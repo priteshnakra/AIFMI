@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import PeerComparison from '../components/PeerComparison.jsx';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 
@@ -107,7 +106,7 @@ export default function CompanyPage() {
     if (!ticker) return;
     const interval = period === '1D' ? '5m' : period === '1W' ? '60m' : period === '1M' ? '1d' : '1wk';
     const range = period === '1D' ? '1d' : period === '1W' ? '5d' : period === '1M' ? '1mo' : '1y';
-    fetch(`https://aifmi-production.up.railway.app/api/chart/${ticker}?interval=${interval}&range=${range}`)
+    fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`)
       .then(r => r.json())
       .then(d => {
         const result = d?.chart?.result?.[0];
@@ -337,10 +336,6 @@ export default function CompanyPage() {
             </div>
           </>
         )}
-
-        {/* Peer Comparison */}
-        <SectionTitle title="Peer Comparison" color={sectorColor} />
-        <PeerComparison currentTicker={ticker} currentName={company?.name} sectorColor={sectorColor} finnhubKey={FKEY} sectorId={company?.sectorId} />
 
         {/* Trade via Brokers */}
         <SectionTitle title="Trade This Stock" color={sectorColor} />
