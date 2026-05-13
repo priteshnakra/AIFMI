@@ -1,58 +1,50 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
-const WS_URL = 'wss://aifmi.onrender.com';
+const API_URL = 'https://aifmi.onrender.com';
 
 export function useLivePrices() {
   const [prices, setPrices] = useState({});
   const [connected, setConnected] = useState(false);
   const [flashMap, setFlashMap] = useState({});
-  const wsRef = useRef(null);
 
-  const connect = useCallback(() => {
-    const ws = new WebSocket(WS_URL);
-    wsRef.current = ws;
-
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => {
-      setConnected(false);
-      setTimeout(connect, 2000);
-    };
-    ws.onerror = () => ws.close();
-
-    ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-      if (msg.type === 'SNAPSHOT' || msg.type === 'PRICE_UPDATE') {
-        const incoming = msg.data;
-        const newFlash = {};
-        setPrices(prev => {
-          const next = { ...prev };
-          for (const [ticker, data] of Object.entries(incoming)) {
-            const old = prev[ticker]?.price;
-            if (old !== undefined && old !== data.price) {
-              newFlash[ticker] = data.price > old ? 'up' : 'down';
-            }
-            next[ticker] = data;
+  const fetchPrices = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/prices`);
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      const newFlash = {};
+      setPrices(prev => {
+        const next = { ...prev };
+        for (const [ticker, d] of Object.entries(data)) {
+          const old = prev[ticker]?.price;
+          if (old !== undefined && old !== d.price) {
+            newFlash[ticker] = d.price > old ? 'up' : 'down';
           }
-          return next;
-        });
-        if (Object.keys(newFlash).length > 0) {
-          setFlashMap(f => ({ ...f, ...newFlash }));
-          setTimeout(() => {
-            setFlashMap(f => {
-              const cleared = { ...f };
-              for (const t of Object.keys(newFlash)) delete cleared[t];
-              return cleared;
-            });
-          }, 600);
+          next[ticker] = d;
         }
+        return next;
+      });
+      if (Object.keys(newFlash).length > 0) {
+        setFlashMap(f => ({ ...f, ...newFlash }));
+        setTimeout(() => {
+          setFlashMap(f => {
+            const cleared = { ...f };
+            for (const t of Object.keys(newFlash)) delete cleared[t];
+            return cleared;
+          });
+        }, 600);
       }
-    };
+      setConnected(true);
+    } catch {
+      setConnected(false);
+    }
   }, []);
 
   useEffect(() => {
-    connect();
-    return () => wsRef.current?.close();
-  }, [connect]);
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000);
+    return () => clearInterval(interval);
+  }, [fetchPrices]);
 
   return { prices, connected, flashMap };
 }
