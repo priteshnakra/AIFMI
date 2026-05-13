@@ -6,7 +6,7 @@ import { sectors, allPublicTickers } from './data/companies.js';
 import intelligenceRouter from './routes/intelligence.js';
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: ['https://aifmi-frontend.vercel.app', 'http://localhost:5173'], credentials: true }));
 app.use(express.json());
 
 const server = createServer(app);

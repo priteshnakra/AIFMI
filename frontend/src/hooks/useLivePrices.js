@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-const WS_URL = 'wss://aifmi-production.up.railway.app';
+const WS_URL = 'wss://aifmi.onrender.com';
 
 export function useLivePrices() {
   const [prices, setPrices] = useState({});

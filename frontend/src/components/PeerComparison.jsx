@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-const API = 'https://aifmi-production.up.railway.app';
+const API = 'https://aifmi.onrender.com';
 const COLORS = ['#1A6FD8', '#0FA97A', '#F0A500', '#DC3C3C', '#7B3FBF', '#C85C14'];
 
 const fmt = (n) => n == null ? '—' : n < 1 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
