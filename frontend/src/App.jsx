@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLivePrices } from './hooks/useLivePrices';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
@@ -71,7 +72,7 @@ function IntelPanel({ company, sector, prices, onClose }) {
     if (!company) return;
     setState('loading'); setBriefing(null); setError(null);
     try {
-      const res = await fetch('/api/intelligence/briefing', {
+      const res = await fetch('https://aifmi.onrender.com/api/intelligence/briefing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company: company.name, ticker: company.ticker, hq: company.hq, spec: company.spec, sector: sector?.fullName ?? sector?.label, exchange: company.exchange }),
@@ -343,6 +344,16 @@ function PriceCell({ ticker, priceData, flashMap }) {
   );
 }
 
+function ProfileBtn({ ticker }) {
+  const navigate = useNavigate();
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); navigate(`/company/${ticker}`); }}
+      style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 6, border: '1.5px solid #1d4ed8', background: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', whiteSpace: 'nowrap' }}
+    >Profile →</button>
+  );
+}
+
 // ── CompanyRow ─────────────────────────────────────────────────────────────
 function CompanyRow({ company, rank, sectorColor, sectorId, prices, flashMap, onSelect, watchlist, onToggleWatch }) {
   const priceData = company.ticker && prices[company.ticker] ? prices[company.ticker] : null;
@@ -382,6 +393,11 @@ function CompanyRow({ company, rank, sectorColor, sectorId, prices, flashMap, on
         >
           {isWatched ? '★' : '☆'}
         </button>
+      </td>
+      <td style={{ padding: '10px 12px', width: 90, textAlign: 'right' }}>
+        {!isPrivate && company.ticker && ['NASDAQ', 'NYSE'].includes(company.exchange) && (
+          <ProfileBtn ticker={company.ticker} />
+        )}
       </td>
       <td style={{ padding: '10px 12px', width: 28, textAlign: 'center', color: '#2a2a3a', fontFamily: 'Space Mono, monospace', fontSize: 14 }} onClick={() => onSelect(company)}>›</td>
     </tr>
@@ -449,7 +465,7 @@ export default function App() {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    fetch('/api/sectors').then(r => r.json()).then(setSectorData).catch(console.error);
+    fetch('https://aifmi.onrender.com/api/sectors').then(r => r.json()).then(setSectorData).catch(console.error);
   }, []);
 
   useEffect(() => {

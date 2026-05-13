@@ -106,7 +106,7 @@ export default function CompanyPage() {
     if (!ticker) return;
     const interval = period === '1D' ? '5m' : period === '1W' ? '60m' : period === '1M' ? '1d' : '1wk';
     const range = period === '1D' ? '1d' : period === '1W' ? '5d' : period === '1M' ? '1mo' : '1y';
-    fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`)
+    fetch(`https://aifmi.onrender.com/api/chart/${ticker}?interval=${interval}&range=${range}`)
       .then(r => r.json())
       .then(d => {
         const result = d?.chart?.result?.[0];
@@ -214,9 +214,9 @@ export default function CompanyPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <MetricCard label="Market Cap" value={fmtB((metrics?.marketCapitalization ?? 0) * 1e6)} />
             <MetricCard label="P/E Ratio" value={fmtNum(metrics?.peBasicExclExtraTTM)} sub="Trailing 12M" />
-            <MetricCard label="EPS (TTM)" value={metrics?.epsBasicExclExtraAnnual ? `$${fmtNum(metrics.epsBasicExclExtraAnnual)}` : '—'} />
+            <MetricCard label="EPS (TTM)" value={metrics?.epsBasicExclExtraItemsAnnual ? `$${fmtNum(metrics.epsBasicExclExtraItemsAnnual)}` : '—'} />
             <MetricCard label="ROE" value={metrics?.roeTTM ? `${fmtNum(metrics.roeTTM)}%` : '—'} color={metrics?.roeTTM > 15 ? '#0FA97A' : undefined} />
-            <MetricCard label="Debt / Equity" value={fmtNum(metrics?.totalDebt_totalEquityAnnual)} color={(metrics?.totalDebt_totalEquityAnnual ?? 0) > 2 ? '#DC3C3C' : '#0FA97A'} />
+            <MetricCard label="Debt / Equity" value={fmtNum(metrics?.["totalDebt/totalEquityAnnual"])} color={(metrics?.["totalDebt/totalEquityAnnual"] ?? 0) > 2 ? '#DC3C3C' : '#0FA97A'} />
             <MetricCard label="Dividend Yield" value={metrics?.dividendYieldIndicatedAnnual ? `${fmtNum(metrics.dividendYieldIndicatedAnnual)}%` : 'N/A'} />
             <MetricCard label="52W High" value={fmt(metrics?.['52WeekHigh'])} />
             <MetricCard label="52W Low" value={fmt(metrics?.['52WeekLow'])} />
