@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 
-const API = 'https://aifmi.onrender.com';
+const API = 'https://aifmi-production.up.railway.app';
 const FINNHUB = 'https://finnhub.io/api/v1';
 const FKEY = import.meta.env.VITE_FINNHUB_KEY ?? '';
 
