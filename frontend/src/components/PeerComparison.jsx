@@ -16,9 +16,9 @@ const fmtNum = (n, d = 2) => n == null ? '—' : n.toFixed(d);
 const fmtPct = (n) => n == null ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 
 const BENCHMARKS = [
-  { ticker: 'FINX', label: 'FinTech Index (FINX)', color: '#3a3a5a', dash: '6 3' },
-  { ticker: 'ARKF', label: 'ARK FinTech (ARKF)', color: '#2a4a3a', dash: '3 3' },
-  { ticker: 'DIA', label: 'Dow Jones (DIA)', color: '#4a3a2a', dash: '4 2' },
+  { ticker: 'FINX', label: 'FinTech Index (FINX)', color: '#555555', dash: '6 3' },
+  { ticker: 'ARKF', label: 'ARK FinTech (ARKF)', color: '#64748b', dash: '3 3' },
+  { ticker: 'DIA', label: 'Dow Jones (DIA)', color: '#475569', dash: '4 2' },
 ];
 
 function normalise(history) {
@@ -186,11 +186,11 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
   const beating = stockPct != null && finxPct != null ? stockPct > finxPct : null;
 
   return (
-    <div style={{ background: '#08080f', borderRadius: 12, border: '1px solid #0f0f1a', padding: '24px' }}>
+    <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #0f0f1a', padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 4 }}>Select peers to compare</div>
-          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#444' }}>Up to 5 stocks · 1M normalised performance vs FinTech benchmarks</div>
+          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, color: '#0a0a0a', marginBottom: 4 }}>Select peers to compare</div>
+          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#222222' }}>Up to 5 stocks · 1M normalised performance vs FinTech benchmarks</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button onClick={() => setShowBenchmarks(b => !b)} style={{ background: showBenchmarks ? '#1a1a2e' : 'none', border: '1px solid #1a1a2e', color: showBenchmarks ? '#888' : '#444', fontFamily: 'Space Mono, monospace', fontSize: 9, padding: '6px 12px', borderRadius: 6, cursor: 'pointer', letterSpacing: 0.5 }}>
@@ -201,20 +201,20 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
               ADD PEERS ({selected.length}/5) {dropdownOpen ? '▲' : '▼'}
             </button>
             {dropdownOpen && (
-              <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: '#07070f', border: '1px solid #1a1a2e', borderRadius: 8, zIndex: 50, minWidth: 220, maxHeight: 280, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+              <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: '#ffffff', border: '1px solid #1a1a2e', borderRadius: 8, zIndex: 50, minWidth: 220, maxHeight: 280, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
                 {sectorPeers.map(peer => {
                   const isSelected = selected.includes(peer.ticker);
                   const isDisabled = !isSelected && selected.length >= 5;
                   return (
                     <div key={peer.ticker} onClick={() => !isDisabled && togglePeer(peer.ticker)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: isDisabled ? 'not-allowed' : 'pointer', opacity: isDisabled ? 0.4 : 1, borderBottom: '1px solid #0f0f1a' }}
-                      onMouseEnter={e => { if (!isDisabled) e.currentTarget.style.background = '#0d0d1a'; }}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      onMouseEnter={e => { if (!isDisabled) e.currentTarget.style.background = '#0a0a0a'; e.currentTarget.style.color = '#ffffff'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0a0a0a'; }}>
                       <div style={{ width: 14, height: 14, borderRadius: 3, border: `1px solid ${isSelected ? sectorColor : '#333'}`, background: isSelected ? sectorColor : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {isSelected && <span style={{ color: '#fff', fontSize: 10 }}>✓</span>}
+                        {isSelected && <span style={{ color: '#0a0a0a', fontSize: 10 }}>✓</span>}
                       </div>
                       <div>
-                        <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 600, fontSize: 13, color: '#f0f0f0' }}>{peer.name}</div>
-                        <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#555' }}>{peer.ticker}</div>
+                        <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 600, fontSize: 13, color: '#0a0a0a' }}>{peer.name}</div>
+                        <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#444444' }}>{peer.ticker}</div>
                       </div>
                     </div>
                   );
@@ -231,21 +231,21 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[i] }} />
             <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: COLORS[i] }}>{t}</span>
             {finalPcts[t] != null && <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: (finalPcts[t] >= 0) ? '#0FA97A' : '#DC3C3C' }}>{finalPcts[t] >= 0 ? '+' : ''}{finalPcts[t]?.toFixed(1)}%</span>}
-            {t !== currentTicker && <span onClick={() => togglePeer(t)} style={{ color: '#555', cursor: 'pointer', fontSize: 12, marginLeft: 2 }}>×</span>}
+            {t !== currentTicker && <span onClick={() => togglePeer(t)} style={{ color: '#444444', cursor: 'pointer', fontSize: 12, marginLeft: 2 }}>×</span>}
           </div>
         ))}
         {showBenchmarks && BENCHMARKS.map(b => (
-          <div key={b.ticker} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: '#0f0f1a', border: '1px solid #1a1a2e', borderRadius: 6 }}>
+          <div key={b.ticker} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: '#f5f5f5', border: '1px solid #1a1a2e', borderRadius: 6 }}>
             <div style={{ width: 16, height: 2, background: b.color, borderRadius: 1 }} />
-            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#555' }}>{b.ticker}</span>
-            {finalPcts[b.ticker] != null && <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#555' }}>{finalPcts[b.ticker] >= 0 ? '+' : ''}{finalPcts[b.ticker]?.toFixed(1)}%</span>}
+            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#444444' }}>{b.ticker}</span>
+            {finalPcts[b.ticker] != null && <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#444444' }}>{finalPcts[b.ticker] >= 0 ? '+' : ''}{finalPcts[b.ticker]?.toFixed(1)}%</span>}
           </div>
         ))}
       </div>
 
       {loading ? (
         <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#333' }}>Loading chart data...</div>
+          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#0a0a0a' }}>Loading chart data...</div>
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={240}>
@@ -253,7 +253,7 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
             <XAxis dataKey="time" tick={{ fill: '#444', fontSize: 10, fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
             <YAxis tick={{ fill: '#444', fontSize: 10, fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} tickFormatter={v => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`} width={55} />
             <ReferenceLine y={0} stroke="#1a1a2e" strokeDasharray="4 4" />
-            <Tooltip contentStyle={{ background: '#0a0a12', border: '1px solid #1a1a2e', borderRadius: 6, fontFamily: 'Space Mono', fontSize: 11 }} formatter={(v, n) => [`${v > 0 ? '+' : ''}${v?.toFixed(2)}%`, n]} />
+            <Tooltip contentStyle={{ background: '#f5f5f5', border: '1px solid #1a1a2e', borderRadius: 6, fontFamily: 'Space Mono', fontSize: 11 }} formatter={(v, n) => [`${v > 0 ? '+' : ''}${v?.toFixed(2)}%`, n]} />
             {allTickers.map((t, i) => (
               <Line key={t} type="monotone" dataKey={t} dot={false} strokeWidth={t === currentTicker ? 2.5 : 1.5} stroke={COLORS[i]} isAnimationActive={false} />
             ))}
@@ -271,7 +271,7 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
             <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: beating ? '#0FA97A' : '#DC3C3C', fontWeight: 700 }}>
               {beating ? '▲ BEATING' : '▼ LAGGING'} FINX by {Math.abs(stockPct - finxPct).toFixed(1)}%
             </span>
-            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#555' }}>
+            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#444444' }}>
               {currentTicker}: {stockPct >= 0 ? '+' : ''}{stockPct?.toFixed(1)}% · FINX: {finxPct >= 0 ? '+' : ''}{finxPct?.toFixed(1)}% · ARKF: {finalPcts['ARKF'] >= 0 ? '+' : ''}{finalPcts['ARKF']?.toFixed(1)}% · DIA: {finalPcts['DIA'] >= 0 ? '+' : ''}{finalPcts['DIA']?.toFixed(1)}%
             </span>
           </div>
@@ -283,16 +283,16 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
 
       {/* AI Analyst Verdict */}
       {(verdict || verdictLoading) && (
-        <div style={{ marginBottom: 16, padding: '16px 20px', background: '#0a0a12', border: '1px solid #1a1a2e', borderRadius: 8, borderLeft: `3px solid ${beating ? '#0FA97A' : '#DC3C3C'}` }}>
+        <div style={{ marginBottom: 16, padding: '16px 20px', background: '#f5f5f5', border: '1px solid #1a1a2e', borderRadius: 8, borderLeft: `3px solid ${beating ? '#0FA97A' : '#DC3C3C'}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#555', letterSpacing: 1 }}>✦ AI ANALYST VERDICT</span>
-            <div style={{ flex: 1, height: 1, background: '#1a1a2e' }} />
-            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#2a2a3a' }}>powered by Claude</span>
+            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#444444', letterSpacing: 1 }}>✦ AI ANALYST VERDICT</span>
+            <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
+            <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#666666' }}>powered by Claude</span>
           </div>
           {verdictLoading ? (
-            <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#333' }}>Analysing performance data...</div>
+            <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#0a0a0a' }}>Analysing performance data...</div>
           ) : (
-            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 13, color: '#bbb', lineHeight: 1.8 }}>{verdict}</div>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 13, color: '#0a0a0a', lineHeight: 1.8 }}>{verdict}</div>
           )}
         </div>
       )}
@@ -303,7 +303,7 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
           <thead>
             <tr style={{ borderBottom: '1px solid #0f0f1a' }}>
               {['Stock', 'Price', '1M Return', 'vs FINX', 'Market Cap', 'P/E', 'ROE', 'EPS'].map(h => (
-                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#444', letterSpacing: 1, fontWeight: 700 }}>{h}</th>
+                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#222222', letterSpacing: 1, fontWeight: 700 }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -319,18 +319,18 @@ export default function PeerComparison({ currentTicker, currentName, sectorColor
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[i], flexShrink: 0 }} />
                       <div>
-                        <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: isMain ? 700 : 500, fontSize: 13, color: '#f0f0f0' }}>{t}</div>
-                        {isMain && <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#555' }}>current</div>}
+                        <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: isMain ? 700 : 500, fontSize: 13, color: '#0a0a0a' }}>{t}</div>
+                        {isMain && <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#444444' }}>current</div>}
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: '#eee' }}>{m.price ? fmt(m.price) : '—'}</td>
+                  <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: '#0a0a0a' }}>{m.price ? fmt(m.price) : '—'}</td>
                   <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: tPct >= 0 ? '#0FA97A' : '#DC3C3C' }}>{tPct != null ? `${tPct >= 0 ? '+' : ''}${tPct.toFixed(1)}%` : '—'}</td>
                   <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: vsFinx >= 0 ? '#0FA97A' : '#DC3C3C', fontSize: 11 }}>{vsFinx != null ? `${vsFinx >= 0 ? '+' : ''}${vsFinx.toFixed(1)}%` : '—'}</td>
-                  <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: '#aaa' }}>{fmtB((m.marketCap ?? 0) * 1e6)}</td>
-                  <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: '#aaa' }}>{fmtNum(m.pe)}</td>
+                  <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: '#0a0a0a' }}>{fmtB((m.marketCap ?? 0) * 1e6)}</td>
+                  <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: '#0a0a0a' }}>{fmtNum(m.pe)}</td>
                   <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: (m.roe ?? 0) > 15 ? '#0FA97A' : '#aaa' }}>{m.roe != null ? `${fmtNum(m.roe)}%` : '—'}</td>
-                  <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: '#aaa' }}>{m.eps != null ? `$${fmtNum(m.eps)}` : '—'}</td>
+                  <td style={{ padding: '10px 12px', fontFamily: 'Space Mono, monospace', color: '#0a0a0a' }}>{m.eps != null ? `$${fmtNum(m.eps)}` : '—'}</td>
                 </tr>
               );
             })}
