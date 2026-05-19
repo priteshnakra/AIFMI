@@ -536,6 +536,7 @@ export default function App() {
           <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 10, color: '#0a0a0a', letterSpacing: 1 }}>AI FINANCIAL MARKET INDICATOR</span>
           <div style={{ width: 1, height: 16, background: '#e0e0e0' }} />
           <nav style={{ display: 'flex', gap: 2 }}>
+            <a href="/portfolio" style={{ padding: "5px 10px", fontSize: 12, fontWeight: 700, color: "#ffffff", textDecoration: "none", borderRadius: 6, background: "#1A6FD8" }}>Portfolio</a>
             <a href="/about" style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500, color: '#0a0a0a', textDecoration: 'none', borderRadius: 6 }}>About</a>
             <a href="/disclaimer" style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500, color: '#0a0a0a', textDecoration: 'none', borderRadius: 6 }}>Disclaimer</a>
             <a href="/contact" style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500, color: '#0a0a0a', textDecoration: 'none', borderRadius: 6 }}>Contact</a>

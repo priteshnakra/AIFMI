@@ -6,6 +6,7 @@ import App from './App.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import DisclaimerPage from './pages/DisclaimerPage.jsx';
+import Portfolio from './pages/Portfolio.jsx';
 import CompanyPage from './pages/CompanyPage.jsx';
 
 createRoot(document.getElementById('root')).render(
@@ -17,6 +18,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/disclaimer" element={<DisclaimerPage />} />
+        <Route path="/portfolio" element={<Portfolio />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>
