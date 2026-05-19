@@ -185,17 +185,19 @@ Provide a JSON response ONLY with this exact structure:
 Be direct, data-driven, and specific. Use actual tickers and numbers.`;
 
     try {
-      const res = await fetch('https://aifmi.onrender.com/api/portfolio/analyze', {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          holdings: holdingsSummary,
-          totalValue,
-          dayChange,
-          sectorBreakdown: sectorSummary,
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }],
         }),
       });
-      const parsed = await res.json();
+      const data = await res.json();
+      const text = data?.content?.[0]?.text ?? '';
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
       setAnalysis(parsed);
     } catch {
       setAnalysis({ error: true });
