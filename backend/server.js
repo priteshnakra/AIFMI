@@ -292,29 +292,17 @@ app.get('/api/stats/:ticker', async (req, res) => {
 // ── Portfolio AI Analysis ──────────────────────────────────────────────────
 app.post('/api/portfolio/analyze', async (req, res) => {
   try {
-    const { holdings, totalValue, dayChange, sectorBreakdown } = req.body;
-    const prompt = `You are a senior portfolio analyst. Analyze this AI semiconductor portfolio and provide institutional-grade insights.
-
-HOLDINGS: ${JSON.stringify(holdings)}
-SECTOR BREAKDOWN: ${JSON.stringify(sectorBreakdown)}
-TOTAL VALUE: $${totalValue}
-DAY CHANGE: $${dayChange}
-
-Respond with ONLY valid JSON, no markdown, no backticks:
-{"verdict":"STRONG BUY|BUY|HOLD|REDUCE|SELL","riskScore":7,"riskLabel":"Elevated","summary":"2-3 sentence summary","strengths":["s1","s2","s3"],"risks":["r1","r2","r3"],"recommendations":[{"action":"ADD|REDUCE|HOLD|TRIM","ticker":"TICKER","reason":"reason"}],"concentration":"comment","outlook":"forward looking sentence"}`;
-
+    const { prompt } = req.body;
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
     });
     const data = await response.json();
     const text = data?.content?.[0]?.text ?? '';
     const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
     res.json(parsed);
-  } catch (e) {
-    res.status(500).json({ error: true, message: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: true }); }
 });
 
 app.post('/api/portfolio/analyze', async (req, res) => {
