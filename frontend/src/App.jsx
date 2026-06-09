@@ -4,6 +4,20 @@ import { useNavigate } from 'react-router-dom';
 import { useLivePrices } from './hooks/useLivePrices';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
+// ── Responsive hook ─────────────────────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= breakpoint);
+    window.addEventListener('resize', onResize);
+    onResize();
+    return () => window.removeEventListener('resize', onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n) => n == null ? '—' : n < 1 ? `$${n.toFixed(4)}` : n < 10 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
 const fmtPct = (n) => n == null ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
@@ -356,11 +370,61 @@ function ProfileBtn({ ticker }) {
 }
 
 // ── CompanyRow ─────────────────────────────────────────────────────────────
-function CompanyRow({ company, rank, sectorColor, sectorId, prices, flashMap, onSelect, watchlist, onToggleWatch }) {
+function CompanyRow({ company, rank, sectorColor, sectorId, prices, flashMap, onSelect, watchlist, onToggleWatch, isMobile }) {
   const priceData = company.ticker && prices[company.ticker] ? prices[company.ticker] : null;
   const isPrivate = company.exchange === 'Private';
   const isWatched = watchlist.some(w => w.name === company.name);
+  const canProfile = !isPrivate && company.ticker && ['NASDAQ', 'NYSE'].includes(company.exchange);
+  const up = (priceData?.changePct ?? 0) >= 0;
 
+  // ── Mobile: stacked card ──────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div style={{
+        background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10,
+        padding: '14px 16px', marginBottom: 10, cursor: 'pointer',
+      }} onClick={() => onSelect(company)}>
+        {/* Top row: rank + name + star */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={{ color: sectorColor, fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 13, fontWeight: 700, flexShrink: 0, lineHeight: 1.4 }}>{rank}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', fontWeight: 700, fontSize: 15, color: '#0a0a0a' }}>
+              {company.name}
+              {isPrivate && <span style={{ marginLeft: 6, fontSize: 9, color: '#555555', fontFamily: '-apple-system, BlinkMacSystemFont, monospace', background: '#f0f0f0', padding: '1px 5px', borderRadius: 3 }}>PRIVATE</span>}
+            </div>
+            <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 11, color: '#666', marginTop: 3 }}>{company.spec}</div>
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); onToggleWatch(company, sectorId); }} style={{
+            background: 'none', border: 'none', cursor: 'pointer', fontSize: 20,
+            color: isWatched ? '#F0A500' : '#ccc', flexShrink: 0, lineHeight: 1, padding: 0,
+          }}>{isWatched ? '★' : '☆'}</button>
+        </div>
+
+        {/* Meta row: ticker · exchange · hq */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          {company.ticker && <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 11, color: sectorColor, background: `${sectorColor}18`, padding: '2px 8px', borderRadius: 4 }}>{company.ticker}</span>}
+          <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 11, color: '#666' }}>{company.exchange}{company.hq ? ` · ${company.hq}` : ''}</span>
+        </div>
+
+        {/* Price + Profile row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>
+          <div>
+            {priceData ? (
+              <>
+                <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 17, fontWeight: 700, color: '#0a0a0a' }}>{fmt(priceData.price)}</span>
+                <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 12, color: up ? '#0FA97A' : '#DC3C3C', marginLeft: 8 }}>{fmtPct(priceData.changePct)}</span>
+              </>
+            ) : (
+              <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 13, color: '#999', fontStyle: 'italic' }}>Private</span>
+            )}
+          </div>
+          {canProfile && <ProfileBtn ticker={company.ticker} />}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Desktop: table row ─────────────────────────────────────────────────────
   return (
     <tr style={{ borderBottom: '1px solid #e8e8e8', cursor: 'pointer' }}
       onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
@@ -407,36 +471,53 @@ function CompanyRow({ company, rank, sectorColor, sectorId, prices, flashMap, on
 
 // ── SectorPanel ────────────────────────────────────────────────────────────
 function SectorPanel({ sector, data, prices, flashMap, active, onSelectCompany, watchlist, onToggleWatch }) {
+  const isMobile = useIsMobile();
   if (!active || !data) return null;
   return (
     <div style={{ animation: 'fadeIn 0.3s ease' }}>
       <div style={{ marginBottom: 20, padding: '16px 20px', background: '#fafafa', borderRadius: 8, borderLeft: `3px solid ${sector.color}` }}>
         <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', fontWeight: 800, fontSize: 13, color: sector.color, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6 }}>{data.fullName}</div>
         <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', fontSize: 13, color: '#0a0a0a', lineHeight: 1.6 }}>{data.description}</div>
-        <div style={{ marginTop: 10, fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 10, color: '#0a0a0a' }}>Click ☆ to watchlist · Click row for AI briefing</div>
+        <div style={{ marginTop: 10, fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 10, color: '#0a0a0a' }}>Click ☆ to watchlist · Click {isMobile ? 'card' : 'row'} for AI briefing</div>
       </div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: `2px solid ${sector.color}33` }}>
-              {['#', 'Company', 'Ticker', 'Exchange', 'HQ', 'Live Price', '☆', ''].map((h, i) => (
-                <th key={i} style={{ padding: '8px 12px', textAlign: i === 5 ? 'right' : 'left', fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 10, color: i === 6 ? '#F0A500' : sector.color, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
+
+      {isMobile ? (
+        <div>
+          {data.companies.map((company, i) => (
+            <CompanyRow key={company.name + i} company={company} rank={i + 1}
+              sectorColor={sector.color} sectorId={sector.id}
+              prices={prices} flashMap={flashMap}
+              onSelect={onSelectCompany}
+              watchlist={watchlist}
+              onToggleWatch={onToggleWatch}
+              isMobile
+            />
+          ))}
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: `2px solid ${sector.color}33` }}>
+                {['#', 'Company', 'Ticker', 'Exchange', 'HQ', 'Live Price', '☆', ''].map((h, i) => (
+                  <th key={i} style={{ padding: '8px 12px', textAlign: i === 5 ? 'right' : 'left', fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 10, color: i === 6 ? '#F0A500' : sector.color, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.companies.map((company, i) => (
+                <CompanyRow key={company.name + i} company={company} rank={i + 1}
+                  sectorColor={sector.color} sectorId={sector.id}
+                  prices={prices} flashMap={flashMap}
+                  onSelect={onSelectCompany}
+                  watchlist={watchlist}
+                  onToggleWatch={onToggleWatch}
+                />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.companies.map((company, i) => (
-              <CompanyRow key={company.name + i} company={company} rank={i + 1}
-                sectorColor={sector.color} sectorId={sector.id}
-                prices={prices} flashMap={flashMap}
-                onSelect={onSelectCompany}
-                watchlist={watchlist}
-                onToggleWatch={onToggleWatch}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -457,6 +538,7 @@ function OverviewCard({ sector, data, prices, onClick, active }) {
 
 // ── App ────────────────────────────────────────────────────────────────────
 export default function App() {
+  const isMobile = useIsMobile();
   const { prices, connected, flashMap } = useLivePrices();
   const [sectorData, setSectorData] = useState({});
   const [activeTab, setActiveTab] = useState('gpu');
@@ -519,39 +601,39 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: '#fafafa', color: '#0a0a0a' }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #050508; }
+        html, body { background: #fafafa; overflow-x: hidden; max-width: 100%; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
         @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
         @keyframes shimmer { 0%{transform:translateX(-200%)} 100%{transform:translateX(300%)} }
         ::-webkit-scrollbar{width:6px;height:6px}
-        ::-webkit-scrollbar-track{background:#050508}
-        ::-webkit-scrollbar-thumb{background:#1a1a2e;border-radius:3px}
+        ::-webkit-scrollbar-track{background:#f0f0f0}
+        ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
       `}</style>
 
       {/* Header */}
-      <header style={{ borderBottom: '1px solid #e8e8e8', padding: '0 32px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', fontWeight: 800, fontSize: 20, color: '#0a0a0a', letterSpacing: -0.5 }}>AI<span style={{ color: '#1A6FD8' }}>FMI</span></span>
-          <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 10, color: '#0a0a0a', letterSpacing: 1 }}>AI FINANCIAL MARKET INDICATOR</span>
-          <div style={{ width: 1, height: 16, background: '#e0e0e0' }} />
-          <nav style={{ display: 'flex', gap: 2 }}>
-            <a href="/portfolio" style={{ padding: "5px 10px", fontSize: 12, fontWeight: 700, color: "#ffffff", textDecoration: "none", borderRadius: 6, background: "#1A6FD8" }}>Portfolio</a>
-            <a href="/about" style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500, color: '#0a0a0a', textDecoration: 'none', borderRadius: 6 }}>About</a>
-            <a href="/disclaimer" style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500, color: '#0a0a0a', textDecoration: 'none', borderRadius: 6 }}>Disclaimer</a>
-            <a href="/contact" style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500, color: '#0a0a0a', textDecoration: 'none', borderRadius: 6 }}>Contact</a>
+      <header style={{ borderBottom: '1px solid #e8e8e8', padding: isMobile ? '0 16px' : '0 32px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16, minWidth: 0 }}>
+          <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', fontWeight: 800, fontSize: 20, color: '#0a0a0a', letterSpacing: -0.5, flexShrink: 0 }}>AI<span style={{ color: '#1A6FD8' }}>FMI</span></span>
+          {!isMobile && <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 10, color: '#0a0a0a', letterSpacing: 1 }}>AI FINANCIAL MARKET INDICATOR</span>}
+          {!isMobile && <div style={{ width: 1, height: 16, background: '#e0e0e0' }} />}
+          <nav style={{ display: 'flex', gap: 2, overflowX: isMobile ? 'auto' : 'visible' }}>
+            <a href="/portfolio" style={{ padding: "5px 10px", fontSize: 12, fontWeight: 700, color: "#ffffff", textDecoration: "none", borderRadius: 6, background: "#1A6FD8", whiteSpace: 'nowrap' }}>Portfolio</a>
+            <a href="/about" style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500, color: '#0a0a0a', textDecoration: 'none', borderRadius: 6, whiteSpace: 'nowrap' }}>About</a>
+            <a href="/disclaimer" style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500, color: '#0a0a0a', textDecoration: 'none', borderRadius: 6, whiteSpace: 'nowrap' }}>Disclaimer</a>
+            <a href="/contact" style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500, color: '#0a0a0a', textDecoration: 'none', borderRadius: 6, whiteSpace: 'nowrap' }}>Contact</a>
           </nav>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 11, color: '#0a0a0a' }}>{now.toLocaleTimeString('en-US', { hour12: false })}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
+          {!isMobile && <span style={{ fontFamily: '-apple-system, BlinkMacSystemFont, monospace', fontSize: 11, color: '#0a0a0a' }}>{now.toLocaleTimeString('en-US', { hour12: false })}</span>}
           <StatusDot connected={connected} />
         </div>
       </header>
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 24px' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '20px 16px' : '28px 24px' }}>
 
         {/* Nav — sector cards + watchlist tab */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr) 160px', gap: 10, marginBottom: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr) 160px', gap: 10, marginBottom: 28 }}>
           {SECTORS.map(s => (
             <OverviewCard key={s.id} sector={s} data={sectorData[s.id]} prices={prices}
               active={activeTab === s.id} onClick={() => setActiveTab(s.id)} />
