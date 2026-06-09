@@ -13,7 +13,10 @@ const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
 const POLYGON_KEY = process.env.POLYGON_API_KEY;
-const USE_REAL = !!POLYGON_KEY;
+const FINNHUB_KEY = process.env.FINNHUB_API_KEY;
+const USE_POLYGON = !!POLYGON_KEY;
+const USE_FINNHUB = !POLYGON_KEY && !!FINNHUB_KEY;
+const USE_REAL = USE_POLYGON || USE_FINNHUB;
 
 // ── Price state ────────────────────────────────────────────────────────────
 // Stores current price + open price (for day change calculation)
@@ -81,7 +84,7 @@ function snapshot() {
 }
 
 // ── POLYGON.IO REAL PRICE FEED ─────────────────────────────────────────────
-if (USE_REAL) {
+if (USE_POLYGON) {
   console.log('📡 Connecting to Polygon.io WebSocket for live prices...');
 
   let polyWs;
@@ -195,9 +198,51 @@ if (USE_REAL) {
 
   fetchPrevClose().then(() => connectPolygon());
 
+} else if (USE_FINNHUB) {
+  // ── FINNHUB REAL PRICE FEED (free tier — real US quotes via REST polling) ──
+  console.log('📡 Using Finnhub for live prices (REST polling)...');
+
+  // Finnhub free tier: 60 calls/min. We poll each US ticker's /quote endpoint.
+  // Quote response: { c: current, d: change, dp: changePct, h, l, o: open, pc: prevClose }
+  async function fetchFinnhubQuotes() {
+    const updates = {};
+    // Throttle: ~50 calls/min ceiling. Space requests ~250ms apart.
+    for (const ticker of US_TICKERS) {
+      try {
+        const res = await fetch(
+          `https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_KEY}`
+        );
+        if (!res.ok) continue;
+        const q = await res.json();
+        // c = current price; pc = previous close (used as the day baseline)
+        if (q && typeof q.c === 'number' && q.c > 0) {
+          // Anchor day-change to previous close so % matches what users see elsewhere
+          if (typeof q.pc === 'number' && q.pc > 0) dayOpen[ticker] = q.pc;
+          updates[ticker] = buildUpdate(ticker, q.c);
+        }
+      } catch (e) {
+        // silent — keep last known price for this ticker
+      }
+      await new Promise(r => setTimeout(r, 250)); // ~4 req/sec, safely under 60/min
+    }
+    if (Object.keys(updates).length > 0) {
+      broadcast('PRICE_UPDATE', updates);
+    }
+    return updates;
+  }
+
+  // Initial fetch, then refresh on an interval.
+  fetchFinnhubQuotes().then((u) => {
+    console.log(`✅ Finnhub: loaded real prices for ${Object.keys(u).length}/${US_TICKERS.length} US tickers`);
+    broadcast('SNAPSHOT', snapshot());
+  });
+
+  // Full refresh cycle. ~35 tickers × 250ms ≈ 9s per cycle; refresh every 60s.
+  setInterval(fetchFinnhubQuotes, 60000);
+
 } else {
   // ── SIMULATION FALLBACK ──────────────────────────────────────────────────
-  console.log('⚠️  No POLYGON_API_KEY — running price simulation');
+  console.log('⚠️  No POLYGON_API_KEY or FINNHUB_API_KEY — running price simulation');
 
   setInterval(() => {
     const updates = {};
@@ -232,7 +277,7 @@ app.get('/api/sectors/:id', (req, res) => {
 
 app.get('/api/health', (req, res) => res.json({
   ok: true,
-  mode: USE_REAL ? 'live' : 'simulation',
+  mode: USE_POLYGON ? 'live-polygon' : USE_FINNHUB ? 'live-finnhub' : 'simulation',
   tickers: allPublicTickers.length,
   ts: Date.now(),
 }));
@@ -248,7 +293,7 @@ const PORT = process.env.PORT ?? 3001;
 server.listen(PORT, () => {
   console.log(`\n🚀 AIFMI API  → http://localhost:${PORT}`);
   console.log(`📡 WebSocket  → ws://localhost:${PORT}`);
-  console.log(`💰 Price mode → ${USE_REAL ? '🟢 LIVE (Polygon.io)' : '🟡 Simulated'}`);
+  console.log(`💰 Price mode → ${USE_POLYGON ? '🟢 LIVE (Polygon.io)' : USE_FINNHUB ? '🟢 LIVE (Finnhub)' : '🟡 Simulated'}`);
   console.log(`📊 Tickers    → ${allPublicTickers.length} across 5 sectors\n`);
 });
 
@@ -290,21 +335,6 @@ app.get('/api/stats/:ticker', async (req, res) => {
 });
 
 // ── Portfolio AI Analysis ──────────────────────────────────────────────────
-app.post('/api/portfolio/analyze', async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
-    });
-    const data = await response.json();
-    const text = data?.content?.[0]?.text ?? '';
-    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
-    res.json(parsed);
-  } catch (e) { res.status(500).json({ error: true }); }
-});
-
 app.post('/api/portfolio/analyze', async (req, res) => {
   try {
     const { prompt } = req.body;
