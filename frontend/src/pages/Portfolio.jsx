@@ -40,6 +40,7 @@ export default function Portfolio() {
   const [editingShares, setEditingShares] = useState(null);
   const [sharesInput, setSharesInput] = useState('');
   const [activeTab, setActiveTab] = useState('holdings');
+  const [riskTolerance, setRiskTolerance] = useState(3);
 
   // Load all companies from backend
   useEffect(() => {
@@ -154,50 +155,48 @@ export default function Portfolio() {
       count: s.count,
     }));
 
-    const prompt = `You are a senior portfolio analyst at a top-tier investment firm. Analyze this AI semiconductor portfolio and provide institutional-grade insights.
+    const prompt = `You are a senior portfolio analyst. Analyze this AI semiconductor portfolio.
 
 PORTFOLIO HOLDINGS:
-${JSON.stringify(holdingsSummary, null, 2)}
+\${JSON.stringify(holdingsSummary, null, 2)}
 
 SECTOR BREAKDOWN:
-${JSON.stringify(sectorSummary, null, 2)}
+\${JSON.stringify(sectorSummary, null, 2)}
 
-TOTAL PORTFOLIO VALUE: $${totalValue.toFixed(2)}
-DAY CHANGE: $${dayChange.toFixed(2)}
+TOTAL PORTFOLIO VALUE: $\${totalValue.toFixed(2)}
+DAY CHANGE: $\${dayChange.toFixed(2)}
 
-Provide a JSON response ONLY with this exact structure:
+INVESTOR RISK TOLERANCE: \${riskTolerance}/5 (\${['','Conservative','Conservative','Moderate','Growth','Aggressive'][riskTolerance]})
+
+Respond with ONLY valid JSON:
 {
   "verdict": "STRONG BUY | BUY | HOLD | REDUCE | SELL",
-  "riskScore": 1-10 number (10 = highest risk),
-  "riskLabel": "Low | Moderate | Elevated | High | Very High",
-  "summary": "2-3 sentence executive summary of the portfolio",
-  "strengths": ["strength 1", "strength 2", "strength 3"],
-  "risks": ["risk 1", "risk 2", "risk 3"],
+  "riskScore": 7,
+  "riskLabel": "Elevated",
+  "riskFit": "one sentence on whether this portfolio matches the investor risk tolerance",
+  "summary": "2-3 sentence summary",
+  "strengths": ["s1", "s2", "s3"],
+  "risks": ["r1", "r2", "r3"],
   "recommendations": [
-    {"action": "ADD | REDUCE | HOLD | TRIM", "ticker": "TICKER", "reason": "one sentence reason"},
-    {"action": "ADD | REDUCE | HOLD | TRIM", "ticker": "TICKER", "reason": "one sentence reason"},
-    {"action": "ADD | REDUCE | HOLD | TRIM", "ticker": "TICKER", "reason": "one sentence reason"}
+    {"action": "ADD | REDUCE | HOLD | TRIM", "ticker": "TICKER", "reason": "reason"}
   ],
-  "concentration": "comment on sector concentration risk",
-  "outlook": "one forward-looking sentence on the AI hardware sector"
+  "pitches": [
+    {"ticker": "TICKER", "name": "Company Name", "sector": "gpu|chip|asic|npu|network", "reason": "2 sentence pitch for why this fills a gap given the investor risk tolerance", "pe": "P/E or N/A", "highlight": "key metric e.g. Rev Growth +46%"},
+    {"ticker": "TICKER", "name": "Company Name", "sector": "gpu|chip|asic|npu|network", "reason": "2 sentence pitch", "pe": "P/E or N/A", "highlight": "key metric"}
+  ],
+  "concentration": "comment on sector concentration",
+  "outlook": "forward looking sentence"
 }
 
-Be direct, data-driven, and specific. Use actual tickers and numbers.`;
+For pitches: recommend 2 stocks the user does NOT own that fill portfolio gaps. Use actual AIFMI companies (NVDA, AMD, INTC, QCOM, ARM, TSM, ASML, AVGO, MRVL, etc).`;
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://aifmi.onrender.com/api/portfolio/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
+        body: JSON.stringify({ prompt }),
       });
-      const data = await res.json();
-      const text = data?.content?.[0]?.text ?? '';
-      const clean = text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
+      const parsed = await res.json();
       setAnalysis(parsed);
     } catch {
       setAnalysis({ error: true });
@@ -276,6 +275,46 @@ Be direct, data-driven, and specific. Use actual tickers and numbers.`;
                 ))}
               </div>
             )}
+
+
+            {/* RISK METER */}
+            <div style={{ background: '#fff', borderRadius: 10, padding: '16px 20px', border: '1px solid #e8e8e8', marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#0a0a0a', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
+                Risk Tolerance
+                <span style={{ fontSize: 10, fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 8 }}>— tell Claude how you want to invest</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: '#0a0a0a', width: 80 }}>Conservative</span>
+                <div style={{ display: 'flex', gap: 8, flex: 1, justifyContent: 'center' }}>
+                  {[1,2,3,4,5].map(n => {
+                    const colors = ['','#15803d','#15803d','#d97706','#d97706','#dc2626'];
+                    const active = n <= riskTolerance;
+                    return (
+                      <div key={n} onClick={() => setRiskTolerance(n)}
+                        style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid ' + (active ? colors[riskTolerance] : '#e0e0e0'), background: active ? colors[riskTolerance] : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: active ? '#fff' : '#0a0a0a', transition: 'all 0.15s', flexShrink: 0 }}>
+                        {n}
+                      </div>
+                    );
+                  })}
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 500, color: '#0a0a0a', width: 80, textAlign: 'right' }}>Aggressive</span>
+              </div>
+              {(() => {
+                const info = [null,
+                  { title: 'Conservative (1/5)', body: 'Maximum capital preservation. Claude will flag positions above 15% and suggest low-beta dividend stocks.', bg: '#f0fdf4', border: '#bbf7d0', tc: '#15803d' },
+                  { title: 'Conservative (2/5)', body: 'You prioritize capital preservation. Claude will flag overweight positions and avoid high-beta stocks.', bg: '#f0fdf4', border: '#bbf7d0', tc: '#15803d' },
+                  { title: 'Moderate (3/5)', body: 'Balanced approach. Claude balances growth and risk management equally.', bg: '#fffbeb', border: '#fde68a', tc: '#d97706' },
+                  { title: 'Growth (4/5)', body: 'You accept higher volatility for higher returns. Claude leans toward buy signals on momentum names.', bg: '#fffbeb', border: '#fde68a', tc: '#d97706' },
+                  { title: 'Aggressive (5/5)', body: 'Maximum growth. Claude recommends high-conviction buys and flags sells only on fundamental breakdowns.', bg: '#fef2f2', border: '#fecaca', tc: '#dc2626' },
+                ][riskTolerance];
+                return (
+                  <div style={{ background: info.bg, borderRadius: 8, padding: '10px 14px', border: '1px solid ' + info.border }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: info.tc, marginBottom: 3 }}>{info.title}</div>
+                    <div style={{ fontSize: 12, color: '#0a0a0a', lineHeight: 1.6 }}>{info.body}</div>
+                  </div>
+                );
+              })()}
+            </div>
 
             {/* ADD STOCK */}
             <div style={{ background: '#fff', borderRadius: 10, padding: '16px 20px', border: '1px solid #e8e8e8', marginBottom: 16, position: 'relative' }}>
@@ -474,6 +513,39 @@ Be direct, data-driven, and specific. Use actual tickers and numbers.`;
                       ))}
                     </div>
 
+
+                    {analysis.pitches && analysis.pitches.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0a0a0a', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>
+                          AI Stock Recommendations
+                          <span style={{ fontSize: 10, fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 8 }}>stocks to consider adding</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          {analysis.pitches.map((p, idx) => {
+                            const sc = ({ gpu: '#1A6FD8', chip: '#0e7490', asic: '#047857', npu: '#6d28d9', network: '#c2410c' })[p.sector] || '#1A6FD8';
+                            return (
+                              <div key={idx} style={{ background: '#fff', borderRadius: 10, padding: '16px 18px', border: '1px solid #e8e8e8', borderLeft: '4px solid ' + sc }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                                  <div>
+                                    <div style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>{p.name}</div>
+                                    <div style={{ fontSize: 11, color: '#0a0a0a', marginTop: 2 }}>{p.ticker} · {p.sector}</div>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 5, flexShrink: 0, marginLeft: 8 }}>
+                                    {p.pe && p.pe !== 'N/A' && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: '#f5f5f5', color: '#0a0a0a' }}>P/E {p.pe}</span>}
+                                    {p.highlight && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: '#f0fdf4', color: '#15803d' }}>{p.highlight}</span>}
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: 12, color: '#0a0a0a', lineHeight: 1.7, marginBottom: 12 }}>{p.reason}</div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                  <button onClick={() => navigate('/company/' + p.ticker)} style={{ flex: 1, padding: '7px', borderRadius: 6, border: 'none', background: '#0a0a0a', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>View Profile</button>
+                                  <button onClick={() => { const co = allCompanies.find(c => c.ticker === p.ticker); if(co) addHolding(co); }} style={{ flex: 1, padding: '7px', borderRadius: 6, border: '1px solid #e0e0e0', background: '#fff', color: '#0a0a0a', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>+ Add</button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     {/* OUTLOOK */}
                     <div style={{ background: '#0a0a0a', borderRadius: 10, padding: '18px 22px' }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#1A6FD8', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Sector Outlook</div>
