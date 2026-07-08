@@ -546,6 +546,50 @@ For pitches: recommend 2 stocks the user does NOT own that fill portfolio gaps. 
                         </div>
                       </div>
                     )}
+
+                    {/* RISK FIT */}
+                    {analysis.riskFit && (
+                      <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '14px 18px', border: '1px solid #e8e8e8', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 16, flexShrink: 0 }}>⚖</span>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#0a0a0a', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Risk Fit Assessment</div>
+                          <div style={{ fontSize: 13, color: '#0a0a0a', lineHeight: 1.7 }}>{analysis.riskFit}</div>
+                        </div>
+                      </div>
+                    )}
+                    {/* AI STOCK RECOMMENDATIONS */}
+                    {analysis.pitches && analysis.pitches.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0a0a0a', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>
+                          AI Stock Recommendations
+                          <span style={{ fontSize: 10, fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 8 }}>— stocks to consider adding</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          {analysis.pitches.map((p, i) => {
+                            const sc = ({ gpu: '#1A6FD8', chip: '#0e7490', asic: '#047857', npu: '#6d28d9', network: '#c2410c' })[p.sector] || '#1A6FD8';
+                            return (
+                              <div key={i} style={{ background: '#fff', borderRadius: 10, padding: '16px 18px', border: '1px solid #e8e8e8', borderLeft: '4px solid ' + sc }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                                  <div>
+                                    <div style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>{p.name}</div>
+                                    <div style={{ fontSize: 11, color: '#0a0a0a', marginTop: 2 }}>{p.ticker} · {p.sector}</div>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 5, flexShrink: 0, marginLeft: 8 }}>
+                                    {p.pe && p.pe !== 'N/A' && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: '#f5f5f5', color: '#0a0a0a' }}>P/E {p.pe}</span>}
+                                    {p.highlight && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: '#f0fdf4', color: '#15803d' }}>{p.highlight}</span>}
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: 12, color: '#0a0a0a', lineHeight: 1.7, marginBottom: 12 }}>{p.reason}</div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                  <button onClick={() => navigate('/company/' + p.ticker)} style={{ flex: 1, padding: '7px', borderRadius: 6, border: 'none', background: '#0a0a0a', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>View Profile →</button>
+                                  <button onClick={() => { const co = allCompanies.find(c => c.ticker === p.ticker); if(co) addHolding(co); }} style={{ flex: 1, padding: '7px', borderRadius: 6, border: '1px solid #e0e0e0', background: '#fff', color: '#0a0a0a', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>+ Add</button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     {/* OUTLOOK */}
                     <div style={{ background: '#0a0a0a', borderRadius: 10, padding: '18px 22px' }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#1A6FD8', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Sector Outlook</div>

@@ -349,3 +349,45 @@ app.post('/api/portfolio/analyze', async (req, res) => {
     res.json(parsed);
   } catch (e) { res.status(500).json({ error: true }); }
 });
+
+// ── AI Intelligence Briefing ───────────────────────────────────────────────
+app.post('/api/intelligence/briefing', async (req, res) => {
+  try {
+    const { ticker, name, sector, price, marketCap, peRatio, roe, eps } = req.body;
+    const prompt = `You are a senior equity analyst at a top investment bank. Write a concise AI intelligence briefing for ${name} (${ticker}), a ${sector} sector company.
+
+Current Data:
+- Price: $${price || 'N/A'}
+- Market Cap: ${marketCap || 'N/A'}
+- P/E Ratio: ${peRatio || 'N/A'}
+- ROE: ${roe || 'N/A'}
+- EPS: ${eps || 'N/A'}
+
+Respond with ONLY valid JSON, no markdown, no backticks:
+{"verdict":"BULLISH|BEARISH|NEUTRAL","summary":"2-3 sentence executive summary","strengths":["strength 1","strength 2","strength 3"],"risks":["risk 1","risk 2"],"catalysts":["catalyst 1","catalyst 2"],"analystNote":"one sharp sentence a Wall Street analyst would say right now"}
+
+Be specific. Reference real products, recent earnings, and market dynamics. No generic statements.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      }),
+    });
+
+    const data = await response.json();
+    const text = data?.content?.[0]?.text ?? '';
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+    res.json(parsed);
+  } catch (e) {
+    console.error('Briefing error:', e.message);
+    res.status(500).json({ error: true, message: e.message });
+  }
+});
