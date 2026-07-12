@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate as useNav } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useLivePrices } from './hooks/useLivePrices';
+import { sectors as SECTOR_DATA } from './data/companies';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 // ── Responsive hook ─────────────────────────────────────────────────────────
@@ -540,16 +541,12 @@ function OverviewCard({ sector, data, prices, onClick, active }) {
 export default function App() {
   const isMobile = useIsMobile();
   const { prices, connected, flashMap } = useLivePrices();
-  const [sectorData, setSectorData] = useState({});
+  const sectorData = SECTOR_DATA; // bundled with the frontend — renders instantly, no network wait
   const [activeTab, setActiveTab] = useState('gpu');
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedCompanySector, setSelectedCompanySector] = useState(null);
   const [watchlist, setWatchlist] = useState(loadWatchlist);
   const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    fetch('https://aifmi.onrender.com/api/sectors').then(r => r.json()).then(setSectorData).catch(console.error);
-  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
