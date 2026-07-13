@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate as useNav } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useLivePrices } from './hooks/useLivePrices';
-import { sectors as SECTOR_DATA } from './data/companies';
+import { sectors as SECTOR_DATA, logoUrl } from './data/companies';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 // ── Responsive hook ─────────────────────────────────────────────────────────
@@ -268,6 +268,12 @@ function WatchlistView({ watchlist, sectorData, prices, flashMap, onRemove, onSe
                     onMouseLeave={e => e.currentTarget.style.background = flashColor || '#08080f'}
                     onClick={() => onSelectCompany(company, sectorId)}
                   >
+                    {/* Logo */}
+                    {company.domain && (
+                      <img src={logoUrl(company.domain, 64)} alt="" width={24} height={24} loading="lazy"
+                        style={{ borderRadius: 6, flexShrink: 0, background: '#fff', padding: 2, border: '1px solid #e8e8e8' }}
+                        onError={e => { e.currentTarget.style.display = 'none'; }} />
+                    )}
                     {/* Company info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', fontWeight: 600, fontSize: 14, color: '#0a0a0a' }}>{company.name}</div>
