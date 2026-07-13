@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import PeerComparison from '../components/PeerComparison.jsx';
 import { useParams, useNavigate } from 'react-router-dom';
+import { logoUrl } from '../data/companies';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 
 const API = 'https://aifmi.onrender.com';
@@ -58,10 +59,75 @@ function SectionTitle({ title, color }) {
 
 // ── Fundamental analysis tabs ──────────────────────────────────────────────
 const VERDICT_COLORS = {
-  STRONG: '#0FA97A', HEALTHY: '#0FA97A', SUNRISE: '#0FA97A', LEADER: '#0FA97A', PROVEN: '#0FA97A',
-  MIXED: '#F0A500', MATURE: '#F0A500', CHALLENGER: '#F0A500', CAPABLE: '#F0A500', NICHE: '#F0A500', UNTESTED: '#F0A500', STAGNANT: '#F0A500',
-  STRAINED: '#DC3C3C', SUNSET: '#DC3C3C', COMMODITY: '#DC3C3C', CONCERNS: '#DC3C3C',
+  STRONG: '#0B9E6E', HEALTHY: '#0B9E6E', SUNRISE: '#0B9E6E', LEADER: '#0B9E6E', PROVEN: '#0B9E6E',
+  MIXED: '#C77E00', MATURE: '#C77E00', CHALLENGER: '#C77E00', CAPABLE: '#C77E00', NICHE: '#C77E00', UNTESTED: '#C77E00', STAGNANT: '#C77E00',
+  STRAINED: '#D4365B', SUNSET: '#D4365B', COMMODITY: '#D4365B', CONCERNS: '#D4365B',
 };
+const VERDICT_GAUGE = {
+  STRONG: 88, HEALTHY: 72, MIXED: 50, STRAINED: 24,
+  SUNRISE: 88, MATURE: 62, STAGNANT: 42, SUNSET: 20,
+  LEADER: 88, CHALLENGER: 66, NICHE: 46, COMMODITY: 26,
+  PROVEN: 88, CAPABLE: 66, UNTESTED: 46, CONCERNS: 24,
+};
+
+// Aurora Ledger glass primitives
+const glassCard = {
+  position: 'relative', padding: '20px 22px', borderRadius: 18,
+  background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+  border: '1px solid rgba(255,255,255,0.95)',
+  boxShadow: '0 6px 22px rgba(18,20,31,0.06), inset 0 1px 0 #fff',
+  transition: 'transform .18s ease, box-shadow .18s ease',
+};
+const glassPanel = (sectorColor) => ({
+  padding: '26px 28px', borderRadius: 20,
+  background: 'linear-gradient(150deg, rgba(255,255,255,0.92), rgba(255,255,255,0.62))',
+  backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid #fff',
+  boxShadow: `0 16px 44px ${sectorColor}24`,
+});
+const GLOW = {
+  good: { color: '#0B9E6E', textShadow: '0 0 16px rgba(11,158,110,0.30)' },
+  warn: { color: '#C77E00', textShadow: '0 0 16px rgba(199,126,0,0.28)' },
+  bad:  { color: '#D4365B', textShadow: '0 0 16px rgba(212,54,91,0.28)' },
+};
+
+function GlassMetric({ label, value, tone }) {
+  return (
+    <div style={glassCard}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}>
+      <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, letterSpacing: 2, color: '#7a7f92', marginBottom: 10, textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 26, letterSpacing: -0.5, color: '#12141f', ...(tone ? GLOW[tone] : {}) }}>{value}</div>
+    </div>
+  );
+}
+
+function VerdictBeam({ verdict, note }) {
+  const color = VERDICT_COLORS[verdict] ?? '#C77E00';
+  const width = VERDICT_GAUGE[verdict] ?? 50;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 20, marginBottom: 22, padding: '18px 24px', borderRadius: 18,
+      background: `linear-gradient(90deg, ${color}1A, rgba(255,255,255,0.75) 60%)`,
+      border: `1px solid ${color}59`, backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+      boxShadow: `0 10px 32px ${color}1F, inset 0 1px 0 #fff`,
+    }}>
+      <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 22, letterSpacing: 1, color, textShadow: `0 0 20px ${color}59` }}>{verdict}</div>
+      <div style={{ flex: 1, height: 8, borderRadius: 99, background: 'rgba(18,20,31,0.07)', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${width}%`, borderRadius: 99, background: 'linear-gradient(90deg, #D4365B, #C77E00, #0B9E6E)', transition: 'width .6s ease' }} />
+      </div>
+      {note && <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: '#6a7086', maxWidth: 300, lineHeight: 1.6 }}>{note}</div>}
+    </div>
+  );
+}
+
+function GlassSection({ title, sectorColor }) {
+  return (
+    <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, letterSpacing: 3, color: sectorColor, margin: '26px 0 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
+      {title.toUpperCase()}
+      <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${sectorColor}59, transparent)` }} />
+    </div>
+  );
+}
 
 const PILLARS = {
   industry: {
@@ -96,15 +162,6 @@ function AnalysisShimmer({ sectorColor }) {
   );
 }
 
-function VerdictPill({ verdict }) {
-  const color = VERDICT_COLORS[verdict] ?? '#F0A500';
-  return (
-    <span style={{ padding: '4px 12px', background: `${color}18`, border: `1px solid ${color}44`, borderRadius: 6, fontFamily: 'Space Mono, monospace', fontSize: 10, color }}>
-      {verdict}
-    </span>
-  );
-}
-
 function AnalysisFooter() {
   return (
     <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#0a0a0a', textAlign: 'right', marginTop: 14 }}>
@@ -133,32 +190,75 @@ function PillarTab({ section, ticker, company, sectorColor }) {
   const { state, data } = useSectionAnalysis(ticker, section, company);
   const a = data?.analysis;
   return (
-    <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #f0f0f0', padding: 24, animation: 'fadeIn 0.3s ease' }}>
-      {state === 'loading' && <AnalysisShimmer sectorColor={sectorColor} />}
-      {state === 'error' && <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#DC3C3C' }}>⚠ Failed to load analysis — try reloading the page.</div>}
+    <div style={{ animation: 'fadeIn 0.3s ease' }}>
+      {state === 'loading' && <div style={glassPanel(sectorColor)}><AnalysisShimmer sectorColor={sectorColor} /></div>}
+      {state === 'error' && <div style={{ ...glassPanel(sectorColor), fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#D4365B' }}>⚠ Failed to load analysis — try reloading the page.</div>}
       {state === 'done' && a && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <VerdictPill verdict={a.verdict} />
-          <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 14, color: '#0a0a0a', lineHeight: 1.8 }}>{a.summary}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            {cfg.fields.map(([key, label]) => a[key] && (
-              <div key={key} style={{ background: '#fafafa', borderRadius: 8, padding: 16, border: `1px solid ${sectorColor}22` }}>
-                <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: sectorColor, letterSpacing: 1, marginBottom: 8 }}>{label.toUpperCase()}</div>
-                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 12, color: '#0a0a0a', lineHeight: 1.7 }}>{a[key]}</div>
-              </div>
-            ))}
-          </div>
-          {cfg.list && Array.isArray(a[cfg.list[0]]) && (
-            <div style={{ padding: '14px 16px', background: '#fafafa', borderRadius: 8, borderLeft: `3px solid ${sectorColor}` }}>
-              <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: sectorColor, marginBottom: 8, letterSpacing: 1 }}>{cfg.list[1].toUpperCase()}</div>
-              {a[cfg.list[0]].map((t, i) => (
-                <div key={i} style={{ fontFamily: 'Syne, sans-serif', fontSize: 12, color: '#0a0a0a', lineHeight: 1.9 }}>· {t}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <VerdictBeam verdict={a.verdict} note={`AI analysis · ${cfg.title}`} />
+          <div style={glassPanel(sectorColor)}>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 15, color: '#12141f', lineHeight: 1.85, marginBottom: 18 }}>{a.summary}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {cfg.fields.map(([key, label]) => a[key] && (
+                <div key={key} style={{ ...glassCard, padding: 16 }}>
+                  <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: sectorColor, letterSpacing: 1, marginBottom: 8 }}>{label.toUpperCase()}</div>
+                  <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 12, color: '#2a2d3d', lineHeight: 1.7 }}>{a[key]}</div>
+                </div>
               ))}
             </div>
-          )}
-          <AnalysisFooter />
+            {cfg.list && Array.isArray(a[cfg.list[0]]) && (
+              <div style={{ marginTop: 14, padding: '14px 16px', background: 'rgba(255,255,255,0.6)', borderRadius: 12, borderLeft: `3px solid ${sectorColor}` }}>
+                <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: sectorColor, marginBottom: 8, letterSpacing: 1 }}>{cfg.list[1].toUpperCase()}</div>
+                {a[cfg.list[0]].map((t, i) => (
+                  <div key={i} style={{ fontFamily: 'Syne, sans-serif', fontSize: 12, color: '#2a2d3d', lineHeight: 1.9 }}>· {t}</div>
+                ))}
+              </div>
+            )}
+            <AnalysisFooter />
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function TrendCharts({ fin, sectorColor }) {
+  const years = [...(fin.trend?.revenue ?? [])].reverse();
+  if (years.length < 2) return null;
+  const niByYear = Object.fromEntries((fin.trend?.netIncome ?? []).map(r => [r.fy, r.val]));
+  const ocfByYear = Object.fromEntries((fin.trend?.operatingCashFlow ?? []).map(r => [r.fy, r.val]));
+  const data = years.map(r => ({
+    fy: `FY${String(r.fy).slice(-2)}`,
+    Revenue: r.val / 1e9,
+    'Net Income': (niByYear[r.fy] ?? 0) / 1e9,
+    'Op. Cash Flow': (ocfByYear[r.fy] ?? 0) / 1e9,
+  }));
+  const tt = { background: 'rgba(255,255,255,0.95)', border: `1px solid ${sectorColor}44`, borderRadius: 8, fontFamily: 'Space Mono', fontSize: 11 };
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 4 }}>
+      <div style={{ ...glassCard, padding: '18px 20px' }}>
+        <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, letterSpacing: 2, color: '#7a7f92', marginBottom: 12 }}>REVENUE VS NET INCOME · $B</div>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={data} barGap={3}>
+            <XAxis dataKey="fy" tick={{ fill: '#7a7f92', fontSize: 10, fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fill: '#7a7f92', fontSize: 10, fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} width={44} tickFormatter={v => `$${v.toFixed(0)}`} />
+            <Tooltip contentStyle={tt} formatter={(v, n) => [`$${v.toFixed(1)}B`, n]} />
+            <Bar dataKey="Revenue" fill={sectorColor} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Net Income" fill="#0B9E6E" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{ ...glassCard, padding: '18px 20px' }}>
+        <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, letterSpacing: 2, color: '#7a7f92', marginBottom: 12 }}>OPERATING CASH FLOW · $B</div>
+        <ResponsiveContainer width="100%" height={180}>
+          <LineChart data={data}>
+            <XAxis dataKey="fy" tick={{ fill: '#7a7f92', fontSize: 10, fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fill: '#7a7f92', fontSize: 10, fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} width={44} tickFormatter={v => `$${v.toFixed(0)}`} />
+            <Tooltip contentStyle={tt} formatter={(v) => [`$${v.toFixed(1)}B`, 'OCF']} />
+            <Line type="monotone" dataKey="Op. Cash Flow" stroke="#0B9E6E" strokeWidth={2.5} dot={{ r: 3, fill: '#0B9E6E' }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -179,7 +279,7 @@ function FinancialsTab({ ticker, company, sectorColor }) {
   }, [ticker]);
 
   if (!ticker) return (
-    <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #f0f0f0', padding: 24, fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#0a0a0a' }}>
+    <div style={{ ...glassPanel(sectorColor), fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#2a2d3d' }}>
       Privately held — no public filings available.
     </div>
   );
@@ -193,85 +293,86 @@ function FinancialsTab({ ticker, company, sectorColor }) {
     ['P&L', [
       ['Revenue', money(st.revenue)], ['Gross Profit', money(st.grossProfit)],
       ['Operating Income', money(st.operatingIncome)], ['Net Income', money(st.netIncome)],
-      ['EBITDA (approx)', money(st.ebitda)], ['Revenue Growth', pc(rt.revenueGrowthPct), (rt.revenueGrowthPct ?? 0) >= 0 ? '#0FA97A' : '#DC3C3C'],
+      ['EBITDA (approx)', money(st.ebitda)], ['Revenue Growth', pc(rt.revenueGrowthPct), (rt.revenueGrowthPct ?? 0) >= 0 ? 'good' : 'bad'],
     ]],
     ['Margins & Returns', [
       ['Gross Margin', pc(rt.grossMarginPct)], ['Operating Margin', pc(rt.operatingMarginPct)],
-      ['Net Margin', pc(rt.netMarginPct), (rt.netMarginPct ?? 0) >= 8 ? '#0FA97A' : '#F0A500'],
+      ['Net Margin', pc(rt.netMarginPct), (rt.netMarginPct ?? 0) >= 8 ? 'good' : 'warn'],
       ['ROE', pc(rt.roePct)], ['ROA', pc(rt.roaPct)], ['ROCE', pc(rt.rocePct)],
     ]],
     ['Balance Sheet', [
       ['Cash', money(st.cash)], ['Long-Term Debt', money(st.longTermDebt)],
-      ['Debt / Equity', rt.debtToEquity ?? '—', (rt.debtToEquity ?? 0) > 2 ? '#DC3C3C' : '#0FA97A'],
-      ['Current Ratio', rt.currentRatio ?? '—', (rt.currentRatio ?? 0) >= 1.5 ? '#0FA97A' : '#F0A500'],
+      ['Debt / Equity', rt.debtToEquity ?? '—', (rt.debtToEquity ?? 0) > 2 ? 'bad' : 'good'],
+      ['Current Ratio', rt.currentRatio ?? '—', (rt.currentRatio ?? 0) >= 1.5 ? 'good' : 'warn'],
       ['Working Capital', money(rt.workingCapital)], ['Goodwill', money(st.goodwill)],
     ]],
     ['Cash Conversion', [
       ['Operating Cash Flow', money(st.operatingCashFlow)], ['Capex', money(st.capex)],
-      ['Free Cash Flow', money(st.freeCashFlow), (st.freeCashFlow ?? 0) >= 0 ? '#0FA97A' : '#DC3C3C'],
+      ['Free Cash Flow', money(st.freeCashFlow), (st.freeCashFlow ?? 0) >= 0 ? 'good' : 'bad'],
       ['Receivable Days', rt.receivableDays ?? '—'], ['Payable Days', rt.payableDays ?? '—'],
       ['R&D % of Revenue', pc(rt.rdPctOfRevenue)],
     ]],
   ];
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'fadeIn 0.3s ease' }}>
-      <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #f0f0f0', padding: 24 }}>
-        {finState === 'loading' && <AnalysisShimmer sectorColor={sectorColor} />}
-        {finState === 'error' && <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#DC3C3C' }}>⚠ Failed to load filing data.</div>}
-        {finState === 'unavailable' && (
-          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#0a0a0a', lineHeight: 1.8 }}>
-            {company?.name} does not file with the US SEC (listed on {company?.exchange}), so audited filing data isn't available here. Market-data metrics are shown on the Overview tab.
-          </div>
-        )}
-        {finState === 'done' && fin && (
-          <>
-            {groups.map(([title, rows]) => (
-              <div key={title} style={{ marginBottom: 20 }}>
-                <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: sectorColor, letterSpacing: 1, marginBottom: 10 }}>{title.toUpperCase()}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                  {rows.map(([label, value, color]) => (
-                    <MetricCard key={label} label={label} value={value} color={color} />
-                  ))}
-                </div>
-              </div>
-            ))}
-            <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#0a0a0a' }}>
-              Source: SEC EDGAR — FY{fin.fiscalYear} filing, period ended {fin.periodEnd} · Figures in {fin.currency}
-            </div>
-          </>
-        )}
-      </div>
+  const beamNote = fin?.fiscalYear
+    ? `FY${fin.fiscalYear} filing · SEC EDGAR · net margin ${pc(rt.netMarginPct)}${(rt.netMarginPct ?? 0) >= 8 ? ' clears the healthy bar' : ''}`
+    : null;
 
-      {finState === 'done' && (
-        <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #f0f0f0', padding: 24 }}>
-          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: sectorColor, letterSpacing: 1, marginBottom: 14 }}>AI READ ON THE NUMBERS</div>
-          {aState === 'loading' && <AnalysisShimmer sectorColor={sectorColor} />}
-          {aState === 'error' && <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#DC3C3C' }}>⚠ Analysis unavailable.</div>}
-          {aState === 'done' && a && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <VerdictPill verdict={a.verdict} />
-              <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 14, color: '#0a0a0a', lineHeight: 1.8 }}>{a.summary}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                {[['profitability', 'Profitability & Cost Control'], ['balanceSheet', 'Balance Sheet'], ['cashConversion', 'Cash Conversion'], ['capitalAllocation', 'Capital Allocation'], ['returns', 'Returns (ROE / ROA / ROCE)']].map(([key, label]) => a[key] && (
-                  <div key={key} style={{ background: '#fafafa', borderRadius: 8, padding: 16, border: `1px solid ${sectorColor}22` }}>
-                    <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: sectorColor, letterSpacing: 1, marginBottom: 8 }}>{label.toUpperCase()}</div>
-                    <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 12, color: '#0a0a0a', lineHeight: 1.7 }}>{a[key]}</div>
-                  </div>
+  return (
+    <div style={{ animation: 'fadeIn 0.3s ease' }}>
+      {finState === 'loading' && <div style={glassPanel(sectorColor)}><AnalysisShimmer sectorColor={sectorColor} /></div>}
+      {finState === 'error' && <div style={{ ...glassPanel(sectorColor), fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#D4365B' }}>⚠ Failed to load filing data.</div>}
+      {finState === 'unavailable' && (
+        <div style={{ ...glassPanel(sectorColor), fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#2a2d3d', lineHeight: 1.8 }}>
+          {company?.name} does not file with the US SEC (listed on {company?.exchange}), so audited filing data isn't available here. Market-data metrics are shown on the Overview tab.
+        </div>
+      )}
+      {finState === 'done' && fin && (
+        <>
+          {aState === 'done' && a?.verdict && <VerdictBeam verdict={a.verdict} note={beamNote} />}
+          <TrendCharts fin={fin} sectorColor={sectorColor} />
+          {groups.map(([title, rows]) => (
+            <div key={title}>
+              <GlassSection title={title} sectorColor={sectorColor} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                {rows.map(([label, value, tone]) => (
+                  <GlassMetric key={label} label={label} value={value} tone={tone} />
                 ))}
               </div>
-              {Array.isArray(a.watchItems) && a.watchItems.length > 0 && (
-                <div style={{ padding: '14px 16px', background: '#fafafa', borderRadius: 8, borderLeft: '3px solid #F0A500' }}>
-                  <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#F0A500', marginBottom: 8, letterSpacing: 1 }}>WATCH ITEMS</div>
-                  {a.watchItems.map((w, i) => (
-                    <div key={i} style={{ fontFamily: 'Syne, sans-serif', fontSize: 12, color: '#0a0a0a', lineHeight: 1.9 }}>· {w}</div>
+            </div>
+          ))}
+          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#8a8fa3', marginTop: 16 }}>
+            Source: SEC EDGAR — FY{fin.fiscalYear} filing, period ended {fin.periodEnd} · Figures in {fin.currency}
+          </div>
+
+          <div style={{ ...glassPanel(sectorColor), marginTop: 24 }}>
+            <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: sectorColor, letterSpacing: 3, marginBottom: 14 }}>AI READ ON THE NUMBERS</div>
+            {aState === 'loading' && <AnalysisShimmer sectorColor={sectorColor} />}
+            {aState === 'error' && <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: '#D4365B' }}>⚠ Analysis unavailable.</div>}
+            {aState === 'done' && a && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 15, color: '#12141f', lineHeight: 1.85 }}>{a.summary}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  {[['profitability', 'Profitability & Cost Control'], ['balanceSheet', 'Balance Sheet'], ['cashConversion', 'Cash Conversion'], ['capitalAllocation', 'Capital Allocation'], ['returns', 'Returns (ROE / ROA / ROCE)']].map(([key, label]) => a[key] && (
+                    <div key={key} style={{ ...glassCard, padding: 16 }}>
+                      <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: sectorColor, letterSpacing: 1, marginBottom: 8 }}>{label.toUpperCase()}</div>
+                      <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 12, color: '#2a2d3d', lineHeight: 1.7 }}>{a[key]}</div>
+                    </div>
                   ))}
                 </div>
-              )}
-              <AnalysisFooter />
-            </div>
-          )}
-        </div>
+                {Array.isArray(a.watchItems) && a.watchItems.length > 0 && (
+                  <div style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.6)', borderRadius: 12, borderLeft: '3px solid #C77E00' }}>
+                    <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#C77E00', marginBottom: 8, letterSpacing: 1 }}>WATCH ITEMS</div>
+                    {a.watchItems.map((w, i) => (
+                      <div key={i} style={{ fontFamily: 'Syne, sans-serif', fontSize: 12, color: '#2a2d3d', lineHeight: 1.9 }}>· {w}</div>
+                    ))}
+                  </div>
+                )}
+                <AnalysisFooter />
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -384,13 +485,18 @@ export default function CompanyPage() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fafafa', color: '#0a0a0a' }}>
+    <div style={{ minHeight: '100vh', background: '#F3F5FB', color: '#0a0a0a', position: 'relative', overflow: 'hidden' }}>
+      <div className="aurora" style={{ width: 760, height: 760, background: sectorColor, opacity: 0.16, top: -300, left: -180 }} />
+      <div className="aurora" style={{ width: 560, height: 560, background: '#7B3FBF', opacity: 0.10, bottom: -260, right: -140, animationDelay: '-10s' }} />
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #050508; }
         @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes shimmer { 0%{transform:translateX(-200%)} 100%{transform:translateX(300%)} }
+        @keyframes drift { from{transform:translate(0,0) scale(1)} to{transform:translate(70px,50px) scale(1.1)} }
+        .aurora { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; animation:drift 20s ease-in-out infinite alternate; }
+        @media (prefers-reduced-motion: reduce) { .aurora { animation:none; } }
         ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-track{background:#050508} ::-webkit-scrollbar-thumb{background:#1a1a2e;border-radius:3px}
         .pbtn { background:none; border:1px solid #1a1a2e; color:#555; fontFamily:'Space Mono',monospace; fontSize:10px; padding:4px 10px; borderRadius:4px; cursor:pointer; transition:all 0.15s; }
         .pbtn:hover { border-color:#333; color:#aaa; }
@@ -398,27 +504,37 @@ export default function CompanyPage() {
       `}</style>
 
       {/* Header */}
-      <header style={{ borderBottom: '1px solid #f0f0f0', padding: '14px 32px', background: '#f5f5f5', position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', gap: 16 }}>
+      <header style={{ borderBottom: '1px solid #f0f0f0', padding: '14px 32px', background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', gap: 16 }}>
         <button onClick={() => navigate('/')} style={{ background: 'none', border: '1px solid #e8e8e8', color: '#0a0a0a', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontFamily: 'Space Mono, monospace', fontSize: 11 }}>← Dashboard</button>
-        <div style={{ height: 20, width: 1, background: '#ffffff' }} />
+        <div style={{ height: 20, width: 1, background: '#e0e0e0' }} />
         <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 10, color: sectorColor, background: `${sectorColor}18`, padding: '3px 10px', borderRadius: 4 }}>{sectorLabel}</span>
+        {company.domain && (
+          <img src={logoUrl(company.domain, 64)} alt="" width={26} height={26}
+            style={{ borderRadius: 7, background: '#fff', padding: 2, border: '1px solid #e8e8e8' }}
+            onError={e => { e.currentTarget.style.display = 'none'; }} />
+        )}
         <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16, color: '#0a0a0a' }}>{company.name}</span>
         {company.ticker && <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#0a0a0a' }}>{company.ticker} · {company.exchange}</span>}
         <div style={{ flex: 1 }} />
         <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 18, color: '#0a0a0a' }}>AI<span style={{ color: '#1A6FD8' }}>FMI</span></span>
       </header>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px', animation: 'fadeIn 0.3s ease' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px', animation: 'fadeIn 0.3s ease', position: 'relative', zIndex: 1 }}>
 
-        {/* Analysis tabs */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 24, borderBottom: '1px solid #f0f0f0', paddingBottom: 0 }}>
+        {/* Analysis tabs — Aurora pill bar */}
+        <div style={{
+          display: 'flex', gap: 6, marginBottom: 26, padding: 6, width: 'max-content', maxWidth: '100%', overflowX: 'auto',
+          background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.95)', borderRadius: 16,
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 8px 26px rgba(18,20,31,0.07), inset 0 1px 0 #fff',
+        }}>
           {[['overview', 'Overview'], ['financials', 'Financials'], ['industry', 'Industry'], ['product', 'Product & Moat'], ['management', 'Management']].map(([id, label]) => (
             <button key={id} onClick={() => setActiveTab(id)} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: '10px 18px', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 13,
-              color: activeTab === id ? sectorColor : '#0a0a0a',
-              borderBottom: activeTab === id ? `2px solid ${sectorColor}` : '2px solid transparent',
-              opacity: activeTab === id ? 1 : 0.6, transition: 'all 0.15s',
+              fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap',
+              padding: '9px 20px', borderRadius: 11, cursor: 'pointer', border: '1px solid transparent', transition: 'all 0.15s',
+              color: activeTab === id ? '#fff' : '#5d6273',
+              background: activeTab === id ? `linear-gradient(135deg, ${sectorColor}, ${sectorColor}CC)` : 'none',
+              boxShadow: activeTab === id ? `0 6px 20px ${sectorColor}66` : 'none',
             }}>{label}</button>
           ))}
         </div>
@@ -432,7 +548,14 @@ export default function CompanyPage() {
         {/* Hero */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 8 }}>
           <div style={{ background: '#ffffff', borderRadius: 12, border: `1px solid ${sectorColor}33`, padding: '24px 28px' }}>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 28, color: '#0a0a0a', marginBottom: 4 }}>{company.name}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 4 }}>
+              {company.domain && (
+                <img src={logoUrl(company.domain, 128)} alt="" width={44} height={44}
+                  style={{ borderRadius: 10, background: '#fff', padding: 4, border: '1px solid #e8e8e8', boxShadow: '0 4px 14px rgba(18,20,31,0.08)' }}
+                  onError={e => { e.currentTarget.style.display = 'none'; }} />
+              )}
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 28, color: '#0a0a0a' }}>{company.name}</div>
+            </div>
             <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 12, color: '#0a0a0a', marginBottom: 20 }}>{company.spec} · {company.hq}</div>
             {quote ? (
               <>
