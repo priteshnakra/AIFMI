@@ -3,7 +3,7 @@ import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
 import { sectors, allPublicTickers } from './data/companies.js';
-import intelligenceRouter from './routes/intelligence.js';
+import intelligenceRouter from './routes/intelligence.js';import fundamentalsRouter from './routes/fundamentals.js';
 
 const app = express();
 app.use(cors({ origin: ['https://aifmi-frontend.vercel.app', 'http://localhost:5173'], credentials: true }));
@@ -282,7 +282,7 @@ app.get('/api/health', (req, res) => res.json({
   ts: Date.now(),
 }));
 
-app.use('/api/intelligence', intelligenceRouter);
+app.use('/api/intelligence', intelligenceRouter);app.use('/api/fundamentals', fundamentalsRouter);
 
 // ── WebSocket handshake ────────────────────────────────────────────────────
 wss.on('connection', (ws) => {
