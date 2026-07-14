@@ -90,13 +90,31 @@ const GLOW = {
   bad:  { color: '#D4365B', textShadow: '0 0 16px rgba(212,54,91,0.28)' },
 };
 
-function GlassMetric({ label, value, tone }) {
+// Robust money formatting: -$103.84M, never $-103841000; distinguishes N/A from NM
+function fmtMoney(n) {
+  if (n === 'NM') return 'NM';
+  if (n == null) return 'N/A';
+  const sign = n < 0 ? '-' : '';
+  const a = Math.abs(n);
+  if (a >= 1e12) return `${sign}$${(a / 1e12).toFixed(2)}T`;
+  if (a >= 1e9)  return `${sign}$${(a / 1e9).toFixed(2)}B`;
+  if (a >= 1e6)  return `${sign}$${(a / 1e6).toFixed(2)}M`;
+  if (a >= 1e3)  return `${sign}$${(a / 1e3).toFixed(1)}K`;
+  return `${sign}$${a.toFixed(0)}`;
+}
+const fmtPctNM = (n) => n === 'NM' ? 'NM' : n == null ? 'N/A' : `${n.toFixed(1)}%`;
+
+function GlassMetric({ label, value, tone, sub, tip }) {
+  const isNM = value === 'NM';
   return (
-    <div style={glassCard}
+    <div style={glassCard} title={tip || undefined}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}>
-      <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, letterSpacing: 2, color: '#7a7f92', marginBottom: 10, textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 26, letterSpacing: -0.5, color: '#12141f', ...(tone ? GLOW[tone] : {}) }}>{value}</div>
+      <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, letterSpacing: 2, color: '#7a7f92', marginBottom: 10, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5 }}>
+        {label}{tip && <span style={{ opacity: 0.55, cursor: 'help', fontSize: 10 }}>ⓘ</span>}
+      </div>
+      <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 26, letterSpacing: -0.5, color: '#12141f', ...(isNM ? { color: '#7a7f92', fontSize: 20 } : tone ? GLOW[tone] : {}) }}>{value}</div>
+      {sub && <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 8.5, color: '#8a8fa3', marginTop: 6, lineHeight: 1.5 }}>{sub}</div>}
     </div>
   );
 }
@@ -286,30 +304,47 @@ function FinancialsTab({ ticker, company, sectorColor }) {
 
   const st = fin?.statements ?? {};
   const rt = fin?.ratios ?? {};
-  const money = (n) => fmtB(n);
-  const pc = (n) => n == null ? '—' : `${n.toFixed(1)}%`;
+  const fx = fin?.formulas ?? {};
+  const money = fmtMoney;
+  const pc = fmtPctNM;
+  const nmTone = (v, tone) => v === 'NM' ? undefined : tone;
 
   const groups = [
-    ['P&L', [
-      ['Revenue', money(st.revenue)], ['Gross Profit', money(st.grossProfit)],
-      ['Operating Income', money(st.operatingIncome)], ['Net Income', money(st.netIncome)],
-      ['EBITDA (approx)', money(st.ebitda)], ['Revenue Growth', pc(rt.revenueGrowthPct), (rt.revenueGrowthPct ?? 0) >= 0 ? 'good' : 'bad'],
+    ['P&L', 'Reported', [
+      ['Revenue', money(st.revenue)],
+      ['Gross Profit', money(st.grossProfit)],
+      ['Operating Income', money(st.operatingIncome), st.operatingIncome < 0 ? 'bad' : undefined],
+      [st.netIncome < 0 ? 'Net Loss' : 'Net Income', money(st.netIncome), st.netIncome < 0 ? 'bad' : undefined],
+      ['EBITDA (derived)', money(st.ebitda), undefined, st.ebitdaNote ?? null, fx.ebitda],
+      ['Revenue Growth', pc(rt.revenueGrowthPct), rt.revenueGrowthPct == null ? undefined : rt.revenueGrowthPct >= 0 ? 'good' : 'bad',
+        rt.revenueGrowthLowBase ? `⚠ low base: ${money(rt.revenuePrior)} → ${money(st.revenue)}` : null, fx.revenueGrowth],
     ]],
-    ['Margins & Returns', [
-      ['Gross Margin', pc(rt.grossMarginPct)], ['Operating Margin', pc(rt.operatingMarginPct)],
-      ['Net Margin', pc(rt.netMarginPct), (rt.netMarginPct ?? 0) >= 8 ? 'good' : 'warn'],
-      ['ROE', pc(rt.roePct)], ['ROA', pc(rt.roaPct)], ['ROCE', pc(rt.rocePct)],
+    ['Margins & Returns', 'Derived', [
+      ['Gross Margin', pc(rt.grossMarginPct)],
+      ['Operating Margin', pc(rt.operatingMarginPct), rt.operatingMarginPct < 0 ? 'bad' : undefined],
+      ['Net Margin', pc(rt.netMarginPct), rt.netMarginPct == null ? undefined : rt.netMarginPct >= 8 ? 'good' : rt.netMarginPct < 0 ? 'bad' : 'warn'],
+      ['ROE', pc(rt.roePct), nmTone(rt.roePct, (rt.roePct ?? 0) > 0 ? 'good' : undefined), rt.roeBasis, fx.roe],
+      ['ROA', pc(rt.roaPct), undefined, rt.roaBasis, fx.roa],
+      ['ROCE', pc(rt.rocePct), undefined, rt.roceBasis, fx.roce],
     ]],
-    ['Balance Sheet', [
-      ['Cash', money(st.cash)], ['Long-Term Debt', money(st.longTermDebt)],
-      ['Debt / Equity', rt.debtToEquity ?? '—', (rt.debtToEquity ?? 0) > 2 ? 'bad' : 'good'],
-      ['Current Ratio', rt.currentRatio ?? '—', (rt.currentRatio ?? 0) >= 1.5 ? 'good' : 'warn'],
-      ['Working Capital', money(rt.workingCapital)], ['Goodwill', money(st.goodwill)],
+    ['Balance Sheet', 'Reported + Derived', [
+      ['Cash & Equivalents', money(st.cash)],
+      ['Short-Term Investments', money(st.stInvestments)],
+      ['Total Liquid Assets', money(st.totalLiquid), undefined, 'cash + short-term investments'],
+      ['Total Debt', money(st.totalDebt), undefined, st.currentDebt != null ? `incl. ${money(st.currentDebt)} current` : null],
+      ['Net Cash', money(st.netCash), st.netCash == null ? undefined : st.netCash >= 0 ? 'good' : 'warn', null, fx.netCash],
+      ['Debt / Equity', rt.debtToEquity === 'NM' ? 'NM' : rt.debtToEquity ?? 'N/A', nmTone(rt.debtToEquity, (rt.debtToEquity ?? 0) > 2 ? 'bad' : 'good'), rt.debtToEquity === 'NM' ? 'equity ≤ 0' : null, fx.debtToEquity],
+      ['Current Ratio', rt.currentRatio ?? 'N/A', (rt.currentRatio ?? 0) >= 1.5 ? 'good' : 'warn', null, fx.currentRatio],
+      ['Working Capital', money(rt.workingCapital), undefined, null, fx.workingCapital],
+      ['Goodwill', money(st.goodwill), undefined, rt.goodwillPctOfAssets != null ? `${pc(rt.goodwillPctOfAssets)} of assets` : null],
     ]],
-    ['Cash Conversion', [
-      ['Operating Cash Flow', money(st.operatingCashFlow)], ['Capex', money(st.capex)],
-      ['Free Cash Flow', money(st.freeCashFlow), (st.freeCashFlow ?? 0) >= 0 ? 'good' : 'bad'],
-      ['Receivable Days', rt.receivableDays ?? '—'], ['Payable Days', rt.payableDays ?? '—'],
+    ['Cash Conversion', 'Derived', [
+      ['Operating Cash Flow', money(st.operatingCashFlow), st.operatingCashFlow < 0 ? 'bad' : undefined],
+      ['Capex', money(st.capex)],
+      ['Free Cash Flow', money(st.freeCashFlow), st.freeCashFlow == null ? undefined : st.freeCashFlow >= 0 ? 'good' : 'bad',
+        rt.fcfToRevenuePct != null && rt.fcfToRevenuePct < 0 ? `${pc(rt.fcfToRevenuePct)} of revenue` : null, fx.freeCashFlow],
+      ['Receivable Days', rt.receivableDays ?? 'N/A', undefined, rt.receivableBasis, fx.receivableDays],
+      ['Payable Days', rt.payableDays ?? 'N/A', undefined, rt.payableBasis, fx.payableDays],
       ['R&D % of Revenue', pc(rt.rdPctOfRevenue)],
     ]],
   ];
@@ -331,18 +366,21 @@ function FinancialsTab({ ticker, company, sectorColor }) {
         <>
           {aState === 'done' && a?.verdict && <VerdictBeam verdict={a.verdict} note={beamNote} />}
           <TrendCharts fin={fin} sectorColor={sectorColor} />
-          {groups.map(([title, rows]) => (
+          {groups.map(([title, badge, rows]) => (
             <div key={title}>
-              <GlassSection title={title} sectorColor={sectorColor} />
+              <GlassSection title={title} sectorColor={sectorColor} badge={badge} />
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-                {rows.map(([label, value, tone]) => (
-                  <GlassMetric key={label} label={label} value={value} tone={tone} />
+                {rows.map(([label, value, tone, sub, tip]) => (
+                  <GlassMetric key={label} label={label} value={value} tone={tone} sub={sub} tip={tip} />
                 ))}
               </div>
             </div>
           ))}
-          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#8a8fa3', marginTop: 16 }}>
-            Source: SEC EDGAR — FY{fin.fiscalYear} filing, period ended {fin.periodEnd} · Figures in {fin.currency}
+          <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 9, color: '#8a8fa3', marginTop: 16, lineHeight: 1.8 }}>
+            Source: SEC EDGAR — {fin.filing?.form ?? 'annual'} filing{fin.filing?.amended ? ' (amended)' : ''}, FY{fin.fiscalYear}, period ended {fin.periodEnd}
+            {fin.filing?.filedDate ? `, filed ${fin.filing.filedDate}` : ''} · Figures in {fin.currency}
+            {fin.filing?.url && <> · <a href={fin.filing.url} target="_blank" rel="noreferrer" style={{ color: sectorColor }}>View filing on SEC.gov ↗</a></>}
+            <br />Hover ⓘ metrics for the exact formula · "Derived" figures are calculated by AIFMI from reported values
           </div>
 
           <div style={{ ...glassPanel(sectorColor), marginTop: 24 }}>
